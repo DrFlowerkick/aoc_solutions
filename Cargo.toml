@@ -1,0 +1,13 @@
+[workspace]
+members = [
+  "aoc-2020",
+  "aoc-2021",
+  "aoc-2022",
+  "aoc-2023",
+  "aoc-2024",
+]
+resolver = "2"
+
+[workspace.dependencies]
+anyhow = "1.0.99"
+my_lib = { git = "https://github.com/DrFlowerkick/mylib", branch = "main" }

@@ -1,0 +1,18 @@
+[package]
+name = "aoc-2024"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["short-run-time"]
+short-run-time = []
+long-run-time = []
+all = ["short-run-time", "long-run-time"]
+
+[dependencies]
+anyhow = { workspace = true }
+my_lib = { workspace = true }
+petgraph = "0.6.5"
+regex = "1.11.1"

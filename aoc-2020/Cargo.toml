@@ -1,0 +1,15 @@
+[package]
+name = "aoc-2020"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["short-run-time"]
+short-run-time = []
+long-run-time = []
+all = ["short-run-time", "long-run-time"]
+
+[dependencies]
+anyhow = { workspace = true }
+my_lib = { workspace = true }
+petgraph = "0.8.2"
