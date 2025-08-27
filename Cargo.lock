@@ -451,8 +451,8 @@ checksum = "32a282da65faaf38286cf3be983213fcf1d2e2a58700e808f83f4ea9a4804bc0"
 
 [[package]]
 name = "my_lib"
-version = "0.8.3"
-source = "git+https://github.com/DrFlowerkick/mylib?branch=main#ab013c0d0caafb8ec671faac8d5343c73960f752"
+version = "0.9.0"
+source = "git+https://github.com/DrFlowerkick/mylib?branch=main#f93826e4432d790a4889535dc009960a31aef2a9"
 dependencies = [
  "anyhow",
  "chrono",
