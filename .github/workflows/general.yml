@@ -1,6 +1,9 @@
 name: Rust
 
-on: [push, pull_request]
+on: push
+
+permissions:
+  contents: read
 
 env:
   CARGO_TERM_COLOR: always
@@ -10,31 +13,69 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout solutions
+        uses: actions/checkout@v3
+        with:
+          path: solutions/
+
+      - name: Checkout private inputs
+        uses: actions/checkout@v3
+        with:
+          repository: drflowerkick/aoc_input
+          path: inputs/
+
       - uses: dtolnay/rust-toolchain@stable
+
       - uses: Swatinem/rust-cache@v2
+
       - name: Run tests
+        working-directory: solutions/
         run: cargo test --workspace --all-features --release
 
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout solutions
+        uses: actions/checkout@v3
+        with:
+          path: solutions/
+
+      - name: Checkout private inputs
+        uses: actions/checkout@v3
+        with:
+          repository: drflowerkick/aoc_input
+          path: inputs/
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+
       - name: Enforce formatting
+        working-directory: solutions/
         run: cargo fmt --all --check
 
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout solutions
+        uses: actions/checkout@v3
+        with:
+          path: solutions/
+
+      - name: Checkout private inputs
+        uses: actions/checkout@v3
+        with:
+          repository: drflowerkick/aoc_input
+          path: inputs/
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
+
       - uses: Swatinem/rust-cache@v2
+
       - name: Linting
+        working-directory: solutions/
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
