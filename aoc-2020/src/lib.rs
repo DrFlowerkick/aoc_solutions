@@ -16,6 +16,7 @@ pub fn run() -> Result<()> {
     days::day_08::solution()?;
     days::day_09::solution()?;
     days::day_10::solution()?;
+    days::day_11::solution()?;
 
     Ok(())
 }
