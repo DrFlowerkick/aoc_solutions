@@ -16,7 +16,7 @@ jobs:
       - name: Checkout solutions
         uses: actions/checkout@v3
         with:
-          path: solutions/
+          path: aoc_solutions/
 
       - name: Checkout private inputs
         uses: actions/checkout@v3
@@ -24,7 +24,7 @@ jobs:
           repository: drflowerkick/aoc_input
           ref: main
           token: ${{ secrets.AOC_INPUT_TOKEN }}
-          path: inputs/
+          path: aoc_input/
           fetch-depth: 1
 
       - uses: dtolnay/rust-toolchain@stable
@@ -32,7 +32,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests
-        working-directory: solutions/
+        working-directory: aoc_solutions/
         run: cargo test --workspace --all-features --release
 
   fmt:
@@ -50,7 +50,7 @@ jobs:
           repository: drflowerkick/aoc_input
           ref: main
           token: ${{ secrets.AOC_INPUT_TOKEN }}
-          path: inputs/
+          path: aoc_input/
           fetch-depth: 1
 
       - uses: dtolnay/rust-toolchain@stable
@@ -58,7 +58,7 @@ jobs:
           components: rustfmt
 
       - name: Enforce formatting
-        working-directory: solutions/
+        working-directory: aoc_solutions/
         run: cargo fmt --all --check
 
   clippy:
@@ -76,7 +76,7 @@ jobs:
           repository: drflowerkick/aoc_input
           ref: main
           token: ${{ secrets.AOC_INPUT_TOKEN }}
-          path: inputs/
+          path: aoc_input/
           fetch-depth: 1
 
       - uses: dtolnay/rust-toolchain@stable
