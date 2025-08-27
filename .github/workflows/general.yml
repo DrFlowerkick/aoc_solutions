@@ -42,7 +42,7 @@ jobs:
       - name: Checkout solutions
         uses: actions/checkout@v3
         with:
-          path: solutions/
+          path: aoc_solutions/
 
       - name: Checkout private inputs
         uses: actions/checkout@v3
@@ -68,7 +68,7 @@ jobs:
       - name: Checkout solutions
         uses: actions/checkout@v3
         with:
-          path: solutions/
+          path: aoc_solutions/
 
       - name: Checkout private inputs
         uses: actions/checkout@v3
@@ -86,5 +86,5 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Linting
-        working-directory: solutions/
+        working-directory: aoc_solutions/
         run: cargo clippy --workspace --all-targets --all-features -- -D warnings
