@@ -257,17 +257,13 @@ mod tests {
 
         let mut remaining_on: Vec<Box3D> = Vec::new();
         let ci3 = example.cuboid_instructions[2].box3d;
-        let mut count_intersections = 0;
         for on_cuboid in on_cuboids {
             if let Some((_, rem_on, _)) = on_cuboid.split_intersecting(ci3) {
                 remaining_on.extend_from_slice(&rem_on);
-                dbg!(rem_on.len());
-                count_intersections += 1;
             } else {
                 remaining_on.push(on_cuboid);
             }
         }
-        dbg!(count_intersections);
         let size_remaining_on: u64 = remaining_on.iter().filter_map(|b| b.size()).sum();
         assert_eq!(size_remaining_on, 38);
 

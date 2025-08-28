@@ -70,7 +70,7 @@ impl ChallengeInput {
         // t = calc_reminder(bus_1, bus_2, r1, r2)
         // than combine busses by multiplying them and
         // calc new_rem by inserting t in III.
-        // do "new_rem mod new_m" to make sure, new_rem < new_m 
+        // do "new_rem mod new_m" to make sure, new_rem < new_m
         let init = bus_rem[0];
         let (_, rem) = bus_rem
             .into_iter()
