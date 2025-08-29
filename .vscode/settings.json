@@ -17,6 +17,7 @@
     "nalgebra",
     "rustworkx",
     "Swatinem",
+    "tppn",
     "unimodal",
     "xmul"
   ],
