@@ -24,6 +24,12 @@ pub fn run() -> Result<()> {
     days::day_16::solution()?;
     days::day_17::solution()?;
     days::day_18::solution()?;
+    #[cfg(any(feature = "long-run-time", test))]
+    days::day_19::solution()?;
+    #[cfg(not(feature = "long-run-time"))]
+    {
+        println!("day 19 part 1 and 2 skipped because of long run time")
+    }
 
     Ok(())
 }
