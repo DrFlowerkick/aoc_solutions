@@ -30,6 +30,7 @@ pub fn run() -> Result<()> {
     {
         println!("day 19 part 1 and 2 skipped because of long run time")
     }
+    days::day_20::solution()?;
 
     Ok(())
 }
