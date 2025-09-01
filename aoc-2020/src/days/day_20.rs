@@ -4,13 +4,14 @@ use anyhow::Result;
 use my_lib::{my_map_point::MapPoint, my_map_two_dim::MyMap2D};
 
 #[derive(Debug, Clone)]
-struct SeaMonster<const X: usize> {
+struct SeaMonster<const X: usize, const Y: usize> {
     offsets: Vec<(usize, usize)>,
 }
 
-impl<const X: usize> SeaMonster<X> {
+impl<const X: usize, const Y: usize> SeaMonster<X, Y> {
     fn new() -> Self {
         SeaMonster {
+            // X: 20, Y: 3: size of initial sea monster, if rotate, X and Y switch values
             offsets: include_str!("../../../../aoc_input/aoc-2020/day_20_sea_monster.txt")
                 .lines()
                 .enumerate()
@@ -23,79 +24,58 @@ impl<const X: usize> SeaMonster<X> {
         }
     }
     fn rotate_clockwise(&self) -> Self {
-        let mut rotated = Self {
+        Self {
             offsets: self
                 .offsets
                 .iter()
-                .map(|sm| MapPoint::<X, X>::from(*sm).rotate_clockwise().into())
+                .map(|sm| MapPoint::<X, Y>::from(*sm).rotate_clockwise().into())
                 .collect(),
-        };
-        rotated.strip_offset();
-        rotated
+        }
     }
     fn rotate_counter_clockwise(&self) -> Self {
-        let mut rotated = Self {
+        Self {
             offsets: self
                 .offsets
                 .iter()
                 .map(|sm| {
-                    MapPoint::<X, X>::from(*sm)
+                    MapPoint::<X, Y>::from(*sm)
                         .rotate_counter_clockwise()
                         .into()
                 })
                 .collect(),
-        };
-        rotated.strip_offset();
-        rotated
+        }
     }
     fn flip_horizontal(&self) -> Self {
-        let mut flipped = Self {
+        Self {
             offsets: self
                 .offsets
                 .iter()
-                .map(|sm| MapPoint::<X, X>::from(*sm).flip_horizontal().into())
+                .map(|sm| MapPoint::<X, Y>::from(*sm).flip_horizontal().into())
                 .collect(),
-        };
-        flipped.strip_offset();
-        flipped
+        }
     }
     fn flip_vertical(&self) -> Self {
-        let mut flipped = Self {
+        Self {
             offsets: self
                 .offsets
                 .iter()
-                .map(|sm| MapPoint::<X, X>::from(*sm).flip_vertical().into())
+                .map(|sm| MapPoint::<X, Y>::from(*sm).flip_vertical().into())
                 .collect(),
-        };
-        flipped.strip_offset();
-        flipped
+        }
     }
     fn flip_flop(&self) -> Self {
-        let mut flipped = Self {
+        Self {
             offsets: self
                 .offsets
                 .iter()
                 .map(|sm| {
-                    MapPoint::<X, X>::from(*sm)
+                    MapPoint::<X, Y>::from(*sm)
                         .flip_vertical()
                         .flip_horizontal()
                         .into()
                 })
                 .collect(),
-        };
-        flipped.strip_offset();
-        flipped
-    }
-    fn strip_offset(&mut self) {
-        let (min_x, min_y) = self
-            .offsets
-            .iter()
-            .fold((X, X), |(min_x, min_y), &(o_x, o_y)| {
-                (min_x.min(o_x), min_y.min(o_y))
-            });
-        self.offsets
-            .iter_mut()
-            .for_each(|offset| *offset = (offset.0 - min_x, offset.1 - min_y));
+        }
     }
 }
 
@@ -222,8 +202,7 @@ impl<const X: usize> ChallengeInput<X> {
             .map(|i| self.tiles[*i].value)
             .product();
         self.build_image_from_corner(corner_indices[0]);
-        let sea_monster = self.search_sea_monsters();
-        self.mask_sea_monsters(sea_monster);
+        self.sea_monsters();
         (
             result_part_1,
             self.image.iter().filter(|(_, v)| **v == '#').count(),
@@ -324,27 +303,39 @@ impl<const X: usize> ChallengeInput<X> {
             }
         }
     }
-    fn search_sea_monsters(&self) -> SeaMonster<X> {
-        let sea_monster = SeaMonster::<X>::new();
-
-        for rot in 0..3 {
-            let rot_sm = match rot {
-                0 => sea_monster.clone(),
-                1 => sea_monster.rotate_clockwise(),
-                _ => sea_monster.rotate_counter_clockwise(),
-            };
+    fn sea_monsters(&mut self) {
+        let sea_monster = SeaMonster::<20, 3>::new();
+        let mut sm_offsets: Vec<(usize, usize)> = Vec::new();
+        'outer: for rot in 0..3 {
             for flip in 0..4 {
-                let flip_sm = match flip {
-                    0 => rot_sm.clone(),
-                    1 => rot_sm.flip_horizontal(),
-                    2 => rot_sm.flip_vertical(),
-                    _ => rot_sm.flip_flop(),
+                let offsets = match (rot, flip) {
+                    (0, 0) => &sea_monster.offsets,
+                    (0, 1) => &sea_monster.flip_horizontal().offsets,
+                    (0, 2) => &sea_monster.flip_vertical().offsets,
+                    (0, _) => &sea_monster.flip_flop().offsets,
+                    (1, 0) => &sea_monster.rotate_clockwise().offsets,
+                    (1, 1) => &sea_monster.rotate_clockwise().flip_horizontal().offsets,
+                    (1, 2) => &sea_monster.rotate_clockwise().flip_vertical().offsets,
+                    (1, _) => &sea_monster.rotate_clockwise().flip_flop().offsets,
+                    (2, 0) => &sea_monster.rotate_counter_clockwise().offsets,
+                    (2, 1) => {
+                        &sea_monster
+                            .rotate_counter_clockwise()
+                            .flip_horizontal()
+                            .offsets
+                    }
+                    (2, 2) => {
+                        &sea_monster
+                            .rotate_counter_clockwise()
+                            .flip_vertical()
+                            .offsets
+                    }
+                    (_, _) => &sea_monster.rotate_counter_clockwise().flip_flop().offsets,
                 };
                 for y in 0..X {
                     for x in 0..X {
                         let anchor = MapPoint::<X, X>::new(x, y);
-                        if flip_sm
-                            .offsets
+                        if offsets
                             .iter()
                             .all(|offset| match anchor.offset_pp(*offset) {
                                 Some(sm_pos) => *self.image.get(sm_pos) == '#',
@@ -352,21 +343,22 @@ impl<const X: usize> ChallengeInput<X> {
                             })
                         {
                             // found a sea monster
-                            return flip_sm;
+                            sm_offsets = offsets.clone();
+                            break 'outer;
                         }
                     }
                 }
             }
         }
-        panic!("could not find any sea monster.")
-    }
-    fn mask_sea_monsters(&mut self, sea_monster: SeaMonster<X>) {
+        if sm_offsets.is_empty() {
+            panic!("could not find any sea monster.");
+        }
+        // mask sea monster in image
         let mut anchors: Vec<MapPoint<X, X>> = Vec::new();
         for y in 0..X {
             for x in 0..X {
                 let anchor = MapPoint::<X, X>::new(x, y);
-                if sea_monster
-                    .offsets
+                if sm_offsets
                     .iter()
                     .all(|offset| match anchor.offset_pp(*offset) {
                         Some(sm_pos) => *self.image.get(sm_pos) == '#',
@@ -379,12 +371,11 @@ impl<const X: usize> ChallengeInput<X> {
             }
         }
         for anchor in anchors {
-            sea_monster
-                .offsets
+            sm_offsets
                 .iter()
                 .filter_map(|offset| anchor.offset_pp(*offset))
                 .for_each(|sm_pos| {
-                    self.image.set(sm_pos, '.');
+                    self.image.set(sm_pos, 'O');
                 });
         }
     }
