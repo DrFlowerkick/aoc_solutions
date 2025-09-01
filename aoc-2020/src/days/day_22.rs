@@ -1,7 +1,9 @@
 //!day_22.rs
 
 use anyhow::Result;
-use std::collections::{HashSet, VecDeque};
+#[cfg(any(feature = "long-run-time", test))]
+use std::collections::HashSet;
+use std::collections::VecDeque;
 
 struct ChallengeInput {
     player_1: VecDeque<usize>,
@@ -59,6 +61,7 @@ impl ChallengeInput {
             .map(|(i, num)| (winner.len() - i) * *num)
             .sum()
     }
+    #[cfg(any(feature = "long-run-time", test))]
     fn solution_part_2(&mut self) -> usize {
         let winner = if self.play_recursive() {
             &self.player_1
@@ -71,6 +74,7 @@ impl ChallengeInput {
             .map(|(i, num)| (winner.len() - i) * *num)
             .sum()
     }
+    #[cfg(any(feature = "long-run-time", test))]
     fn play_recursive(&mut self) -> bool {
         let mut cache: HashSet<(VecDeque<usize>, VecDeque<usize>)> = HashSet::new();
         while !self.player_1.is_empty() && !self.player_2.is_empty() {
@@ -112,10 +116,17 @@ pub fn solution() -> Result<()> {
     println!("result day_22 part 1: {result_part1}");
     assert_eq!(result_part1, 33_680);
 
-    let mut challenge = ChallengeInput::from(input);
-    let result_part2 = challenge.solution_part_2();
-    println!("result day_22 part 2: {result_part2}");
-    assert_eq!(result_part2, 33_683);
+    #[cfg(any(feature = "long-run-time", test))]
+    {
+        let mut challenge = ChallengeInput::from(input);
+        let result_part2 = challenge.solution_part_2();
+        println!("result day_22 part 2: {result_part2}");
+        assert_eq!(result_part2, 33_683);
+    }
+    #[cfg(not(feature = "long-run-time"))]
+    {
+        println!("day 22 part 2 skipped because of long run time")
+    }
 
     Ok(())
 }
