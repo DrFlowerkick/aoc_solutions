@@ -387,7 +387,6 @@ impl<const X: usize> ChallengeInput<X> {
 pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2020/day_20.txt");
     let mut challenge = ChallengeInput::<96>::from(input);
-    dbg!(challenge.tiles.len());
 
     let (result_part1, result_part2) = challenge.solution_part_1_and_2();
     println!("result day_20 part 1: {result_part1}");
