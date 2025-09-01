@@ -79,11 +79,32 @@ impl<const X: usize, const Y: usize> SeaMonster<X, Y> {
     }
 }
 
+#[derive(Debug, Clone, Copy, Eq)]
+struct Border(u16);
+
+// since Border is created by reading bits clockwise around a tile
+// two connecting tiles always have reverse reading order
+// therefore to compare two borders, one must be reversed
+impl PartialEq for Border {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.reverse().0
+    }
+}
+
+impl Border {
+    fn insert_bit(&mut self, bit: bool) {
+        self.0 = (self.0 << 1) + bit as u16
+    }
+    fn reverse(&self) -> Self {
+        Border(self.0.reverse_bits() >> 6)
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct ImageTile {
     raw: MyMap2D<char, 10, 10>,
     value: u64,
-    borders: [u16; 4],
+    borders: [Border; 4],
     neighbors: [Option<usize>; 4],
 }
 
@@ -94,24 +115,11 @@ impl From<&str> for ImageTile {
         let value = value.parse().unwrap();
         let raw = MyMap2D::from(raw);
         // borders are read clockwise around tile, starting with top
-        let borders = (0..10).fold([0; 4], |mut b, i| {
-            let bits = [
-                if *raw.get((i, 0).into()) == '#' { 1 } else { 0 },
-                if *raw.get((9, i).into()) == '#' { 1 } else { 0 },
-                if *raw.get((9 - i, 9).into()) == '#' {
-                    1
-                } else {
-                    0
-                },
-                if *raw.get((0, 9 - i).into()) == '#' {
-                    1
-                } else {
-                    0
-                },
-            ];
-            b.iter_mut().zip(bits).for_each(|(border, bit)| {
-                *border = (*border << 1) + bit;
-            });
+        let borders = (0..10).fold([Border(0); 4], |mut b, i| {
+            b[0].insert_bit(*raw.get((i, 0).into()) == '#');
+            b[1].insert_bit(*raw.get((9, i).into()) == '#');
+            b[2].insert_bit(*raw.get((9 - i, 9).into()) == '#');
+            b[3].insert_bit(*raw.get((0, 9 - i).into()) == '#');
             b
         });
         ImageTile {
@@ -123,10 +131,6 @@ impl From<&str> for ImageTile {
     }
 }
 
-fn invert_border(border: u16) -> u16 {
-    border.reverse_bits() >> 6
-}
-
 impl ImageTile {
     fn set_neighbors(&mut self, border_pos: usize, index: usize) {
         self.neighbors[border_pos] = Some(index);
@@ -135,13 +139,8 @@ impl ImageTile {
         let mut border_fits: Vec<(usize, usize)> = Vec::new();
         for (i_s, i_b) in self.borders.iter().enumerate() {
             for (o_s, o_b) in others.borders.iter().enumerate() {
-                if i_b == o_b {
+                if i_b == o_b || *i_b == o_b.reverse() {
                     border_fits.push((i_s, o_s));
-                } else {
-                    let inverted_border = invert_border(*o_b);
-                    if *i_b == inverted_border {
-                        border_fits.push((i_s, o_s));
-                    }
                 }
             }
         }
@@ -164,7 +163,7 @@ impl ImageTile {
         self.neighbors.swap(0, 2);
         self.borders.swap(0, 2);
         for border in self.borders.iter_mut() {
-            *border = invert_border(*border);
+            *border = border.reverse();
         }
     }
     fn flip_vertical(&mut self) {
@@ -175,7 +174,7 @@ impl ImageTile {
         self.neighbors.swap(1, 3);
         self.borders.swap(1, 3);
         for border in self.borders.iter_mut() {
-            *border = invert_border(*border);
+            *border = border.reverse();
         }
     }
 }
@@ -201,14 +200,16 @@ impl<const X: usize> ChallengeInput<X> {
             .iter()
             .map(|i| self.tiles[*i].value)
             .product();
-        self.build_image_from_corner(corner_indices[0]);
+        // corner 1 results in upstanding monster
+        self.build_image_from_corner(corner_indices[1]);
         self.sea_monsters();
         (
             result_part_1,
             self.image.iter().filter(|(_, v)| **v == '#').count(),
         )
     }
-    fn set_neighbors(&mut self) {
+    fn search_corners(&mut self) -> Vec<usize> {
+        // set neighbors
         for i_1 in 0..self.tiles.len() {
             for i_2 in i_1 + 1..self.tiles.len() {
                 if let Some((b_1, b_2)) = self.tiles[i_1].compare_borders(self.tiles[i_2]) {
@@ -217,14 +218,16 @@ impl<const X: usize> ChallengeInput<X> {
                 }
             }
         }
-    }
-    fn search_corners(&mut self) -> Vec<usize> {
-        self.set_neighbors();
-        self.tiles
+        // corners only have two neighbors
+        let corner_indices: Vec<usize> = self
+            .tiles
             .iter()
             .enumerate()
             .filter_map(|(i, t)| (t.neighbors.iter().filter_map(|n| *n).count() == 2).then_some(i))
-            .collect()
+            .collect();
+        // four corners?
+        assert_eq!(corner_indices.len(), 4);
+        corner_indices
     }
     fn build_image_from_corner(&mut self, corner_index: usize) {
         // we expect image to be quadratic
@@ -249,13 +252,11 @@ impl<const X: usize> ChallengeInput<X> {
                 }
                 // check if horizontal flip is required
                 // to be identical borders, one border must first be rotated
-                if self.tiles[current_index].borders[1]
-                    != invert_border(self.tiles[east].borders[3])
-                {
+                if self.tiles[current_index].borders[1] != self.tiles[east].borders[3] {
                     self.tiles[east].flip_horizontal();
                     assert_eq!(
                         self.tiles[current_index].borders[1],
-                        invert_border(self.tiles[east].borders[3])
+                        self.tiles[east].borders[3]
                     );
                 }
                 current_index = east;
@@ -268,11 +269,11 @@ impl<const X: usize> ChallengeInput<X> {
                     self.tiles[south].rotate_clockwise();
                 }
                 // check if vertical flip is required
-                if self.tiles[row_start].borders[2] != invert_border(self.tiles[south].borders[0]) {
+                if self.tiles[row_start].borders[2] != self.tiles[south].borders[0] {
                     self.tiles[south].flip_vertical();
                     assert_eq!(
                         self.tiles[row_start].borders[2],
-                        invert_border(self.tiles[south].borders[0])
+                        self.tiles[south].borders[0]
                     );
                 }
                 current_index = south;
@@ -305,6 +306,7 @@ impl<const X: usize> ChallengeInput<X> {
     }
     fn sea_monsters(&mut self) {
         let sea_monster = SeaMonster::<20, 3>::new();
+        // find rotation / flip of sea monster
         let mut sm_offsets: Vec<(usize, usize)> = Vec::new();
         'outer: for rot in 0..3 {
             for flip in 0..4 {
@@ -353,7 +355,7 @@ impl<const X: usize> ChallengeInput<X> {
         if sm_offsets.is_empty() {
             panic!("could not find any sea monster.");
         }
-        // mask sea monster in image
+        // find all sea monsters in image
         let mut anchors: Vec<MapPoint<X, X>> = Vec::new();
         for y in 0..X {
             for x in 0..X {
@@ -370,6 +372,7 @@ impl<const X: usize> ChallengeInput<X> {
                 }
             }
         }
+        // mask sea monsters in image
         for anchor in anchors {
             sm_offsets
                 .iter()
