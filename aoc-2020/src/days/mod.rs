@@ -22,4 +22,6 @@ pub mod day_19;
 pub mod day_20;
 pub mod day_21;
 pub mod day_22;
+pub mod day_23;
+pub mod day_23_slice_brute_force;
 pub mod template;
