@@ -8,7 +8,6 @@ use petgraph::{Direction, graphmap::DiGraphMap};
 use std::fmt::Write;
 use std::time::Instant;
 
-
 struct ChallengeInput {
     cup_map: DiGraphMap<usize, ()>,
     current: usize,

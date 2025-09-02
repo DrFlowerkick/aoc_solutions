@@ -25,4 +25,5 @@ pub mod day_22;
 pub mod day_23;
 pub mod day_23_petgraph;
 pub mod day_23_slice_brute_force;
+pub mod day_24;
 pub mod template;
