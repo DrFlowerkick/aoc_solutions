@@ -1,4 +1,7 @@
 //!day_23.rs
+// ############################################################################
+// # INFO: this solution took about 1.4 seconds for part 2 on my notebook     #
+// ############################################################################
 
 use anyhow::Result;
 use std::cell::RefCell;

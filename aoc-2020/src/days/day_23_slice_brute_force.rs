@@ -147,7 +147,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_example_day_23() -> Result<()> {
+    fn test_example_day_23_slice_brute_force() -> Result<()> {
         let input = include_str!("../../../../aoc_input/aoc-2020/day_23_example.txt");
         let mut example = ChallengeInput::from(input);
 
