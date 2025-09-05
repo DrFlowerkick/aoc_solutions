@@ -57,6 +57,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "my_lib",
+ "petgraph 0.8.2",
 ]
 
 [[package]]
