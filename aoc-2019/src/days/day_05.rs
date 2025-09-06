@@ -1,18 +1,25 @@
 //!day_05.rs
 
 use anyhow::Result;
+use std::collections::HashMap;
 
-#[derive(Debug, Clone, Hash)]
+#[derive(Debug, Clone)]
 pub struct IntCodeComputer {
-    numbers: Vec<i64>,
-    index: usize,
+    numbers: HashMap<i64, i64>,
+    index: i64,
+    relative_base: i64,
 }
 
 impl From<&str> for IntCodeComputer {
     fn from(value: &str) -> Self {
         IntCodeComputer {
-            numbers: value.split(',').filter_map(|n| n.parse().ok()).collect(),
+            numbers: value
+                .split(',')
+                .enumerate()
+                .filter_map(|(i, n)| n.parse().ok().map(|d| (i as i64, d)))
+                .collect(),
             index: 0,
+            relative_base: 0,
         }
     }
 }
@@ -78,7 +85,7 @@ impl IntCodeComputer {
         // it returns None if finished or Some(out), if some out command has been executed
         let mut input_index = 0;
 
-        while let Some(ext_op_code) = self.numbers.get(self.index) {
+        while let Some(ext_op_code) = self.numbers.get(&self.index) {
             let op_code = ext_op_code % 100;
             let parameter_modes = ext_op_code / 100;
 
@@ -86,32 +93,24 @@ impl IntCodeComputer {
                 1 => {
                     // addition
                     let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    *self
-                        .numbers
-                        .get_mut(parameters[2] as usize)
-                        .ok_or(format!("invalid index '{}'", parameters[2]))? =
-                        parameters[0] + parameters[1];
+                    self.set(parameters[2], parameters[0] + parameters[1])?;
                     self.index += 4;
                 }
                 2 => {
                     // multiplication
                     let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    *self
-                        .numbers
-                        .get_mut(parameters[2] as usize)
-                        .ok_or(format!("invalid index '{}'", parameters[2]))? =
-                        parameters[0] * parameters[1];
+                    self.set(parameters[2], parameters[0] * parameters[1])?;
                     self.index += 4;
                 }
                 3 => {
                     // write input to position
                     let parameters = self.get_n_parameters(parameter_modes, 1, true)?;
-                    *self
-                        .numbers
-                        .get_mut(parameters[0] as usize)
-                        .ok_or(format!("invalid index '{}'", parameters[0]))? = *inputs
-                        .get(input_index)
-                        .ok_or(format!("invalid input index '{input_index}'"))?;
+                    self.set(
+                        parameters[0],
+                        *inputs
+                            .get(input_index)
+                            .ok_or(format!("invalid input index '{input_index}'"))?,
+                    )?;
                     input_index += 1;
                     self.index += 2;
                 }
@@ -126,7 +125,7 @@ impl IntCodeComputer {
                     // jump if true
                     let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
                     self.index = if parameters[0] != 0 {
-                        parameters[1] as usize
+                        parameters[1]
                     } else {
                         self.index + 3
                     }
@@ -135,7 +134,7 @@ impl IntCodeComputer {
                     // jump if false
                     let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
                     self.index = if parameters[0] == 0 {
-                        parameters[1] as usize
+                        parameters[1]
                     } else {
                         self.index + 3
                     }
@@ -144,21 +143,21 @@ impl IntCodeComputer {
                     // less than
                     let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
                     let store_val = (parameters[0] < parameters[1]) as i64;
-                    *self
-                        .numbers
-                        .get_mut(parameters[2] as usize)
-                        .ok_or(format!("invalid index '{}'", parameters[2]))? = store_val;
+                    self.set(parameters[2], store_val)?;
                     self.index += 4;
                 }
                 8 => {
                     // equals
                     let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
                     let store_val = (parameters[0] == parameters[1]) as i64;
-                    *self
-                        .numbers
-                        .get_mut(parameters[2] as usize)
-                        .ok_or(format!("invalid index '{}'", parameters[2]))? = store_val;
+                    self.set(parameters[2], store_val)?;
                     self.index += 4;
+                }
+                9 => {
+                    // change relative base
+                    let parameters = self.get_n_parameters(parameter_modes, 1, false)?;
+                    self.relative_base += parameters[0];
+                    self.index += 2;
                 }
                 99 => {
                     // immediately halt
@@ -170,48 +169,76 @@ impl IntCodeComputer {
         Ok(None)
     }
 
+    fn get(&mut self, key: i64) -> Result<i64, String> {
+        if key < 0 {
+            return Err("negative index of memory".into());
+        }
+        // insert 0, if entry does not exist yet
+        Ok(*self.numbers.entry(key).or_insert(0))
+    }
+
+    fn set(&mut self, key: i64, value: i64) -> Result<i64, String> {
+        if key < 0 {
+            return Err("negative index of memory".into());
+        }
+        // insert 0, if entry does not exist yet
+        Ok(*self
+            .numbers
+            .entry(key)
+            .and_modify(|v| *v = value)
+            .or_insert(value))
+    }
+
     fn get_n_parameters(
-        &self,
+        &mut self,
         mut parameter_modes: i64,
         num_parameters: usize,
         last_is_write: bool,
     ) -> Result<Vec<i64>, String> {
         let mut parameters = vec![0; num_parameters];
-        for (p_index, parameter) in parameters.iter_mut().enumerate() {
+        for (p_index, parameter) in parameters
+            .iter_mut()
+            .enumerate()
+            .map(|(i, p)| (i as i64, p))
+        {
             let parameter_mode = parameter_modes % 10;
             parameter_modes /= 10;
             *parameter = match parameter_mode {
                 0 => {
                     // position
-                    let pos = *self
-                        .numbers
-                        .get(self.index + p_index + 1)
-                        .ok_or(format!("invalid index '{}'", self.index + p_index + 1))?;
+                    let pos = self.get(self.index + p_index + 1)?;
                     if pos < 0 {
                         return Err(format!("Negative position index '{pos}'"));
                     }
                     // if writing position, just return writing position
-                    if p_index == num_parameters - 1 && last_is_write {
+                    if p_index == (num_parameters as i64) - 1 && last_is_write {
                         pos
                     } else {
-                        *self
-                            .numbers
-                            .get(pos as usize)
-                            .ok_or(format!("invalid index '{pos}'"))?
+                        self.get(pos)?
                     }
                 }
                 1 => {
                     // immediate
                     // not valid for writing to position
-                    if p_index == num_parameters - 1 && last_is_write {
+                    if p_index == (num_parameters as i64) - 1 && last_is_write {
                         return Err(
                             "immediate mode not valid for writing parameter to memory".into()
                         );
                     }
-                    *self
-                        .numbers
-                        .get(self.index + p_index + 1)
-                        .ok_or(format!("invalid index '{}'", self.index + p_index + 1))?
+                    self.get(self.index + p_index + 1)?
+                }
+                2 => {
+                    // relative mode
+                    let pos = self.get(self.index + p_index + 1)? + self.relative_base;
+                    if pos < 0 {
+                        return Err(format!("Negative position index '{pos}'"));
+                    }
+                    // if writing position, just return writing position
+                    if p_index == (num_parameters as i64) - 1 && last_is_write {
+                        pos
+                    } else {
+                        self.get(pos)?
+                    }
                 }
                 _ => return Err("not supported parameter mode".into()),
             };
@@ -244,63 +271,56 @@ mod tests {
     // instead there are some int code snippets we can use for testing
 
     #[test]
-    fn test_day_05_equal_less() -> Result<()> {
+    fn test_day_05_small_examples() -> Result<()> {
+        let small_examples =
+            include_str!("../../../../aoc_input/aoc-2019/day_05_small_examples.txt");
+        let int_code_computers: Vec<IntCodeComputer> =
+            small_examples.lines().map(IntCodeComputer::from).collect();
         // input == 8 ? with position mode
-        let int_code = "3,9,8,9,10,9,4,9,99,-1,8";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[0].clone();
         let result = example.run_until_finished(&[8]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[0].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 0);
 
         // input == 8 ? with immediate mode
-        let int_code = "3,3,1108,-1,8,3,4,3,99";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[1].clone();
         let result = example.run_until_finished(&[8]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[1].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 0);
 
         // input less than 8 ? with position mode
-        let int_code = "3,9,7,9,10,9,4,9,99,-1,8";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[2].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[2].clone();
         let result = example.run_until_finished(&[8]);
         assert_eq!(result, 0);
 
         // input less than 8 ? with immediate mode
-        let int_code = "3,3,1107,-1,8,3,4,3,99";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[3].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[3].clone();
         let result = example.run_until_finished(&[8]);
         assert_eq!(result, 0);
 
-        Ok(())
-    }
-
-    #[test]
-    fn test_day_05_jump() -> Result<()> {
         // jump: input == 0 ? with position mode
-        let int_code = "3,12,6,12,15,1,13,14,13,4,13,99,-1,0,1,9";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[4].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[4].clone();
         let result = example.run_until_finished(&[0]);
         assert_eq!(result, 0);
 
         // jump: input == 0 ? with immediate mode
-        let int_code = "3,3,1105,-1,9,1101,0,0,12,4,12,99,1";
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[5].clone();
         let result = example.run_until_finished(&[7]);
         assert_eq!(result, 1);
-        let mut example = IntCodeComputer::from(int_code);
+        let mut example = int_code_computers[5].clone();
         let result = example.run_until_finished(&[0]);
         assert_eq!(result, 0);
 
