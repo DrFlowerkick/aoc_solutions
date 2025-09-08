@@ -245,6 +245,12 @@ impl IntCodeComputer {
         }
         Ok(parameters)
     }
+    pub fn set_address(&mut self, add: i64, val: i64) {
+        self.numbers
+            .entry(add)
+            .and_modify(|v| *v = val)
+            .or_insert(val);
+    }
 }
 
 pub fn solution() -> Result<()> {
