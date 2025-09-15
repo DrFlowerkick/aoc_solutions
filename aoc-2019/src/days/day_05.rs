@@ -2,12 +2,22 @@
 
 use anyhow::Result;
 use std::collections::HashMap;
+use std::sync::mpsc::{Receiver, Sender, TryRecvError};
+use std::thread;
+use std::time::Duration;
+
+enum IntOut {
+    None,
+    Out(i64),
+    Halt,
+}
 
 #[derive(Debug, Clone)]
 pub struct IntCodeComputer {
     numbers: HashMap<i64, i64>,
     index: i64,
     relative_base: i64,
+    id: i64,
 }
 
 impl From<&str> for IntCodeComputer {
@@ -20,6 +30,7 @@ impl From<&str> for IntCodeComputer {
                 .collect(),
             index: 0,
             relative_base: 0,
+            id: 0,
         }
     }
 }
@@ -89,84 +100,104 @@ impl IntCodeComputer {
             let op_code = ext_op_code % 100;
             let parameter_modes = ext_op_code / 100;
 
-            match op_code {
-                1 => {
-                    // addition
-                    let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    self.set(parameters[2], parameters[0] + parameters[1])?;
-                    self.index += 4;
-                }
-                2 => {
-                    // multiplication
-                    let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    self.set(parameters[2], parameters[0] * parameters[1])?;
-                    self.index += 4;
-                }
-                3 => {
-                    // write input to position
-                    let parameters = self.get_n_parameters(parameter_modes, 1, true)?;
-                    self.set(
-                        parameters[0],
-                        *inputs
-                            .get(input_index)
-                            .ok_or(format!("invalid input index '{input_index}'"))?,
-                    )?;
-                    input_index += 1;
-                    self.index += 2;
-                }
-                4 => {
-                    // return val to out
-                    let parameters = self.get_n_parameters(parameter_modes, 1, false)?;
-                    let out = Some(parameters[0]);
-                    self.index += 2;
-                    return Ok(out);
-                }
-                5 => {
-                    // jump if true
-                    let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
-                    self.index = if parameters[0] != 0 {
-                        parameters[1]
-                    } else {
-                        self.index + 3
+            let input = if op_code == 3 {
+                *inputs
+                    .get(input_index)
+                    .ok_or(format!("invalid input index '{input_index}'"))?
+            } else {
+                0
+            };
+            match self.execute_opcode(op_code, parameter_modes, input)? {
+                IntOut::None => {
+                    if op_code == 3 {
+                        // increment input_index
+                        input_index += 1;
                     }
                 }
-                6 => {
-                    // jump if false
-                    let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
-                    self.index = if parameters[0] == 0 {
-                        parameters[1]
-                    } else {
-                        self.index + 3
-                    }
-                }
-                7 => {
-                    // less than
-                    let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    let store_val = (parameters[0] < parameters[1]) as i64;
-                    self.set(parameters[2], store_val)?;
-                    self.index += 4;
-                }
-                8 => {
-                    // equals
-                    let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                    let store_val = (parameters[0] == parameters[1]) as i64;
-                    self.set(parameters[2], store_val)?;
-                    self.index += 4;
-                }
-                9 => {
-                    // change relative base
-                    let parameters = self.get_n_parameters(parameter_modes, 1, false)?;
-                    self.relative_base += parameters[0];
-                    self.index += 2;
-                }
-                99 => {
-                    // immediately halt
-                    break;
-                }
-                _ => panic!("unknown op code"),
+                IntOut::Out(out) => return Ok(Some(out)),
+                IntOut::Halt => break,
             }
         }
         Ok(None)
+    }
+
+    fn execute_opcode(
+        &mut self,
+        op_code: i64,
+        parameter_modes: i64,
+        input: i64,
+    ) -> Result<IntOut, String> {
+        match op_code {
+            1 => {
+                // addition
+                let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
+                self.set(parameters[2], parameters[0] + parameters[1])?;
+                self.index += 4;
+            }
+            2 => {
+                // multiplication
+                let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
+                self.set(parameters[2], parameters[0] * parameters[1])?;
+                self.index += 4;
+            }
+            3 => {
+                // write input to position
+                let parameters = self.get_n_parameters(parameter_modes, 1, true)?;
+                self.set(parameters[0], input)?;
+                self.index += 2;
+            }
+            4 => {
+                // return val to out
+                let parameters = self.get_n_parameters(parameter_modes, 1, false)?;
+                let out = parameters[0];
+                self.index += 2;
+                return Ok(IntOut::Out(out));
+            }
+            5 => {
+                // jump if true
+                let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
+                self.index = if parameters[0] != 0 {
+                    parameters[1]
+                } else {
+                    self.index + 3
+                }
+            }
+            6 => {
+                // jump if false
+                let parameters = self.get_n_parameters(parameter_modes, 2, false)?;
+                self.index = if parameters[0] == 0 {
+                    parameters[1]
+                } else {
+                    self.index + 3
+                }
+            }
+            7 => {
+                // less than
+                let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
+                let store_val = (parameters[0] < parameters[1]) as i64;
+                self.set(parameters[2], store_val)?;
+                self.index += 4;
+            }
+            8 => {
+                // equals
+                let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
+                let store_val = (parameters[0] == parameters[1]) as i64;
+                self.set(parameters[2], store_val)?;
+                self.index += 4;
+            }
+            9 => {
+                // change relative base
+                let parameters = self.get_n_parameters(parameter_modes, 1, false)?;
+                self.relative_base += parameters[0];
+                self.index += 2;
+            }
+            99 => {
+                // immediately halt
+                return Ok(IntOut::Halt);
+            }
+            _ => panic!("unknown op code"),
+        }
+        Ok(IntOut::None)
     }
 
     fn get(&mut self, key: i64) -> Result<i64, String> {
@@ -250,6 +281,45 @@ impl IntCodeComputer {
             .entry(add)
             .and_modify(|v| *v = val)
             .or_insert(val);
+    }
+    pub fn run_int_code_with_mpsc(
+        &mut self,
+        in_receiver: Receiver<i64>,
+        out_sender: Sender<(i64, i64)>,
+        default_if_empty: i64,
+        sleep_if_empty: Duration,
+    ) -> Result<(), String> {
+        while let Some(ext_op_code) = self.numbers.get(&self.index) {
+            let op_code = ext_op_code % 100;
+            let parameter_modes = ext_op_code / 100;
+
+            let input = if op_code == 3 {
+                match in_receiver.try_recv() {
+                    Ok(input) => input,
+                    Err(TryRecvError::Empty) => {
+                        // wait a short time
+                        thread::sleep(sleep_if_empty);
+                        default_if_empty
+                    }
+                    Err(TryRecvError::Disconnected) => return Ok(()),
+                }
+            } else {
+                0
+            };
+            match self.execute_opcode(op_code, parameter_modes, input)? {
+                IntOut::None => (),
+                IntOut::Out(out) => {
+                    if out_sender.send((self.id, out)).is_err() {
+                        return Ok(());
+                    }
+                }
+                IntOut::Halt => break,
+            }
+        }
+        Ok(())
+    }
+    pub fn set_id(&mut self, id: i64) {
+        self.id = id;
     }
 }
 
