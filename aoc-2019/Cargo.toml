@@ -12,4 +12,6 @@ all = ["short-run-time", "long-run-time"]
 [dependencies]
 anyhow = { workspace = true }
 my_lib = { workspace = true }
+num-bigint = "0.4.6"
+num-traits = "0.2.19"
 petgraph = "0.8.2"
