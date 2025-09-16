@@ -2,9 +2,9 @@
 
 use anyhow::Result;
 use std::collections::HashMap;
-use std::sync::mpsc::{Receiver, Sender, TryRecvError};
 use std::thread;
 use std::time::Duration;
+use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, error::TryRecvError};
 
 enum IntOut {
     None,
@@ -284,9 +284,9 @@ impl IntCodeComputer {
     }
     pub fn run_int_code_with_mpsc(
         &mut self,
-        in_receiver: Receiver<i64>,
-        out_sender: Sender<(i64, i64)>,
-        default_if_empty: i64,
+        mut in_receiver: UnboundedReceiver<i64>,
+        out_sender: UnboundedSender<(i64, i64)>,
+        default_if_empty: Option<i64>,
         sleep_if_empty: Duration,
     ) -> Result<(), String> {
         while let Some(ext_op_code) = self.numbers.get(&self.index) {
@@ -299,7 +299,12 @@ impl IntCodeComputer {
                     Err(TryRecvError::Empty) => {
                         // wait a short time
                         thread::sleep(sleep_if_empty);
-                        default_if_empty
+                        if let Some(default) = default_if_empty {
+                            default
+                        } else {
+                            // cycle while loop to wait for input
+                            continue;
+                        }
                     }
                     Err(TryRecvError::Disconnected) => return Ok(()),
                 }

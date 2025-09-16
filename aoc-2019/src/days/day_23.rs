@@ -3,9 +3,9 @@
 use super::day_05::IntCodeComputer;
 use anyhow::Result;
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::sync::mpsc::{Receiver, Sender, TryRecvError, channel};
 use std::thread;
 use std::time::Duration;
+use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, error::TryRecvError};
 
 struct Nic {}
 
@@ -13,14 +13,14 @@ impl Nic {
     fn boot(
         mut code: IntCodeComputer,
         address: i64,
-        out_sender: Sender<(i64, i64)>,
+        out_sender: UnboundedSender<(i64, i64)>,
         sleep_if_empty: Duration,
-    ) -> Sender<i64> {
-        let (tx, receiver) = channel();
+    ) -> UnboundedSender<i64> {
+        let (tx, receiver) = mpsc::unbounded_channel();
 
         thread::spawn(move || {
             code.set_id(address);
-            code.run_int_code_with_mpsc(receiver, out_sender, -1, sleep_if_empty)
+            code.run_int_code_with_mpsc(receiver, out_sender, Some(-1), sleep_if_empty)
                 .unwrap();
         });
         // send address to initialize Nic code
@@ -31,14 +31,14 @@ impl Nic {
 
 struct ChallengeInput {
     code: IntCodeComputer,
-    rx: Receiver<(i64, i64)>,
-    tx: Sender<(i64, i64)>,
+    rx: UnboundedReceiver<(i64, i64)>,
+    tx: UnboundedSender<(i64, i64)>,
     sleep_if_empty: Duration,
 }
 
 impl From<&str> for ChallengeInput {
     fn from(value: &str) -> Self {
-        let (tx, rx) = channel();
+        let (tx, rx) = mpsc::unbounded_channel();
         ChallengeInput {
             code: IntCodeComputer::from(value),
             rx,
@@ -49,8 +49,8 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> Result<i64> {
-        let nic_input_senders: HashMap<i64, Sender<i64>> = (0..50)
+    fn solution_part_1(&mut self) -> Result<i64> {
+        let nic_input_senders: HashMap<i64, UnboundedSender<i64>> = (0..50)
             .map(|addr| {
                 (
                     addr,
@@ -86,8 +86,8 @@ impl ChallengeInput {
             }
         }
     }
-    fn solution_part_2(&self) -> Result<i64> {
-        let nic_input_senders: HashMap<i64, Sender<i64>> = (0..50)
+    fn solution_part_2(&mut self) -> Result<i64> {
+        let nic_input_senders: HashMap<i64, UnboundedSender<i64>> = (0..50)
             .map(|addr| {
                 (
                     addr,
@@ -154,7 +154,7 @@ impl ChallengeInput {
 
 pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2019/day_23.txt");
-    let challenge = ChallengeInput::from(input);
+    let mut challenge = ChallengeInput::from(input);
 
     let result_part1 = challenge.solution_part_1()?;
     println!("result day_23 part 1: {result_part1}");

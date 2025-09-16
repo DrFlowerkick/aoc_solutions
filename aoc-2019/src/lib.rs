@@ -2,6 +2,8 @@
 
 pub mod days;
 
+pub mod day_25_tui;
+
 use anyhow::Result;
 
 pub fn run() -> Result<()> {
