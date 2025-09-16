@@ -1,7 +1,8 @@
 use std::collections::HashSet;
 
-use super::{AppEvent, Event, EventHandler, IntCodeHandler, ShipRoom, ui};
+use super::{AppEvent, Event, EventHandler, IntCodeHandler, RoomCrawler, ShipRoom, ui};
 use color_eyre::eyre::bail;
+use crossterm::event::KeyEventKind;
 use ratatui::{
     DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
@@ -14,21 +15,24 @@ pub enum ActiveArea {
     Room,
     ItemsOfRoom,
     CollectedItems,
+    Crawler,
 }
 
 impl ActiveArea {
     pub fn left(&self) -> Self {
         match self {
-            ActiveArea::Room => ActiveArea::CollectedItems,
+            ActiveArea::Room => ActiveArea::Crawler,
             ActiveArea::ItemsOfRoom => ActiveArea::Room,
             ActiveArea::CollectedItems => ActiveArea::ItemsOfRoom,
+            ActiveArea::Crawler => ActiveArea::CollectedItems,
         }
     }
     pub fn right(&self) -> Self {
         match self {
             ActiveArea::Room => ActiveArea::ItemsOfRoom,
             ActiveArea::ItemsOfRoom => ActiveArea::CollectedItems,
-            ActiveArea::CollectedItems => ActiveArea::Room,
+            ActiveArea::CollectedItems => ActiveArea::Crawler,
+            ActiveArea::Crawler => ActiveArea::Room,
         }
     }
     pub fn navigation_text(&self) -> &str {
@@ -42,6 +46,7 @@ impl ActiveArea {
             ActiveArea::CollectedItems => {
                 "Select previous item with ▲ / Up, next item with ▼ / Down, drop item to room with ◄ / Left."
             }
+            ActiveArea::Crawler => "Activate / Deactivate crawler with Enter.",
         }
     }
 }
@@ -71,6 +76,10 @@ pub struct App {
     pub state_collected_items: ListState,
     /// flag for check of inventory
     pub flag_check_inventory: bool,
+    /// room crawler, which tries every door and collects every item he finds
+    pub room_crawler: RoomCrawler,
+    /// if true, room crawler sleeps after each generated event for a short time for visibility
+    pub sleepy_room_crawler: bool,
 }
 
 impl Default for App {
@@ -88,6 +97,8 @@ impl Default for App {
             collected_items: Vec::new(),
             state_collected_items: ListState::default(),
             flag_check_inventory: false,
+            room_crawler: RoomCrawler::default(),
+            sleepy_room_crawler: true,
         }
     }
 }
@@ -109,6 +120,7 @@ impl App {
 
     /// Run the application's main loop in silent mode (no tui!)
     pub async fn run_no_tui(mut self) -> color_eyre::Result<()> {
+        self.sleepy_room_crawler = false;
         while self.running {
             self.handle_events().await?;
         }
@@ -134,8 +146,12 @@ impl App {
                     self.visited_rooms.insert(ship_room.name.clone());
                     self.ship_room = Some(ship_room);
                     self.last_text_message.clear();
+                    self.room_crawler
+                        .enter_room(&mut self.events, &self.ship_room);
                 }
                 AppEvent::TextMessage(text) => {
+                    self.room_crawler
+                        .collect_message(&text, &mut self.events, &self.ship_room);
                     self.last_text_message = text;
                     if self.flag_check_inventory {
                         self.check_inventory()?;
@@ -182,6 +198,9 @@ impl App {
 
     /// Handles the key events and updates the state of [`App`].
     pub fn handle_key_events(&mut self, key_event: KeyEvent) -> color_eyre::Result<()> {
+        if key_event.kind != KeyEventKind::Press {
+            return Ok(());
+        }
         match key_event.code {
             KeyCode::Esc | KeyCode::Char('q') => self.events.send(AppEvent::Quit),
             KeyCode::Char('c' | 'C') if key_event.modifiers == KeyModifiers::CONTROL => {
@@ -191,25 +210,69 @@ impl App {
                 ActiveArea::Room => self.events.send(AppEvent::Up),
                 ActiveArea::ItemsOfRoom => self.events.send(AppEvent::PreviousRoomItem),
                 ActiveArea::CollectedItems => self.events.send(AppEvent::PreviousCollectedItem),
+                ActiveArea::Crawler => {}
             },
             KeyCode::Down => match self.active_area {
                 ActiveArea::Room => self.events.send(AppEvent::Down),
                 ActiveArea::ItemsOfRoom => self.events.send(AppEvent::NexRoomItem),
                 ActiveArea::CollectedItems => self.events.send(AppEvent::NextCollectedItem),
+                ActiveArea::Crawler => {}
             },
             KeyCode::Right => match self.active_area {
                 ActiveArea::Room => self.events.send(AppEvent::Right),
                 ActiveArea::ItemsOfRoom => self.events.send(AppEvent::TakeRoomItem),
                 ActiveArea::CollectedItems => {}
+                ActiveArea::Crawler => {}
             },
             KeyCode::Left => match self.active_area {
                 ActiveArea::Room => self.events.send(AppEvent::Left),
                 ActiveArea::ItemsOfRoom => {}
                 ActiveArea::CollectedItems => self.events.send(AppEvent::DropCollectedItem),
+                ActiveArea::Crawler => {}
             },
-            KeyCode::Home => self.active_area = self.active_area.left(),
-            KeyCode::End => self.active_area = self.active_area.right(),
-            KeyCode::Char('i') => self.events.send(AppEvent::CheckInventory),
+            KeyCode::Home => {
+                if !self.room_crawler.active {
+                    self.active_area = self.active_area.left();
+                }
+            }
+            KeyCode::End => {
+                if !self.room_crawler.active {
+                    self.active_area = self.active_area.right();
+                }
+            }
+            KeyCode::Char('i') => {
+                if !self.room_crawler.active {
+                    self.events.send(AppEvent::CheckInventory);
+                }
+            }
+            KeyCode::Enter => match self.active_area {
+                ActiveArea::Crawler => self.room_crawler.toggle_status(
+                    &mut self.events,
+                    &self.ship_room,
+                    self.sleepy_room_crawler,
+                ),
+                _ => {}
+            },
+            KeyCode::PageUp => match self.active_area {
+                ActiveArea::Crawler => {
+                    self.room_crawler.scroll = self.room_crawler.scroll.saturating_sub(1);
+                    self.room_crawler.scroll_state = self
+                        .room_crawler
+                        .scroll_state
+                        .position(self.room_crawler.scroll);
+                }
+                _ => {}
+            },
+            KeyCode::PageDown => match self.active_area {
+                ActiveArea::Crawler => {
+                    self.room_crawler.scroll = self.room_crawler.scroll.saturating_add(1);
+                    self.room_crawler.scroll_state = self
+                        .room_crawler
+                        .scroll_state
+                        .position(self.room_crawler.scroll);
+                }
+                _ => {}
+            },
             _ => {}
         }
         Ok(())
@@ -239,6 +302,13 @@ impl App {
     pub fn fg_color_collected_items(&self) -> Color {
         match self.active_area {
             ActiveArea::CollectedItems => Color::Yellow,
+            _ => Color::Cyan,
+        }
+    }
+
+    pub fn fg_color_crawler_messages(&self) -> Color {
+        match self.active_area {
+            ActiveArea::Crawler => Color::Yellow,
             _ => Color::Cyan,
         }
     }
@@ -296,6 +366,11 @@ impl App {
         }
         self.flag_check_inventory = false;
         Ok(())
+    }
+
+    /// room crawler
+    pub fn run_room_crawler(&mut self) -> color_eyre::Result<()> {
+        todo!()
     }
 
     /// Set running to false to quit the application.

@@ -155,3 +155,9 @@ impl TryFrom<&str> for ShipRoom {
         }
     }
 }
+
+impl ShipRoom {
+    pub fn get_name(&self) -> Option<&str> {
+        self.name.strip_prefix("==")?.strip_suffix("==")
+    }
+}
