@@ -15,7 +15,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Min(1),
-            Constraint::Length(6),
+            Constraint::Length(5),
         ])
         .split(frame.area());
 
@@ -40,13 +40,11 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         .title_alignment(Alignment::Center)
         .border_type(BorderType::Rounded);
 
-    let mut text: Vec<Line> = Vec::new();
-    if !app.error_message.is_empty() {
-        text.push(Line::from(app.error_message.as_str()).bold().red());
-    }
-    text.push(Line::from(app.active_area.navigation_text()));
-    text.push(Line::from(app.active_area.secondary_navigation_text()));
-    text.push(Line::from("Press `Esc`, `Ctrl-C` or `q` to stop running."));
+    let text = vec![
+        Line::from(app.active_area.navigation_text()),
+        Line::from("Compare collected items with inventory from int code with: i."),
+        Line::from("Press `Esc`, `Ctrl-C` or `q` to stop running."),
+    ];
 
     let navigation = Paragraph::new(text)
         .block(block)
@@ -64,6 +62,15 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             Constraint::Percentage(30),
         ])
         .split(vertical[1]);
+
+    let left_main_layout = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(vec![
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(50),
+        ])
+        .split(main_layout[0]);
 
     // ship room
     if let Some(ship_room) = app.ship_room.as_ref() {
@@ -95,7 +102,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             .fg(app.fg_color_room())
             .bg(Color::Black)
             .wrap(Wrap { trim: true });
-        frame.render_widget(room, main_layout[0]);
+        frame.render_widget(room, left_main_layout[0]);
 
         // items of ship room
         let block = Block::bordered()
@@ -123,7 +130,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             .border_type(BorderType::Rounded)
             .fg(app.fg_color_room())
             .bg(Color::Black);
-        frame.render_widget(block, main_layout[0]);
+        frame.render_widget(block, left_main_layout[0]);
 
         let block = Block::bordered()
             .title("Items in Room")
@@ -133,6 +140,39 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             .bg(Color::Black);
         frame.render_widget(block, main_layout[1]);
     }
+
+    // last text message
+    let block = Block::bordered()
+        .title("Last message from robot")
+        .title_alignment(Alignment::Left)
+        .border_type(BorderType::Rounded);
+    let message = Paragraph::new(app.last_text_message.as_str())
+        .block(block)
+        .left_aligned()
+        .fg(app.fg_color_room())
+        .bg(Color::Black)
+        .wrap(Wrap { trim: true });
+    frame.render_widget(message, left_main_layout[1]);
+
+    // visited rooms
+    let block = Block::bordered()
+        .title("Visited rooms")
+        .title_alignment(Alignment::Left)
+        .border_type(BorderType::Rounded);
+    let mut rooms: Vec<_> = app.visited_rooms.iter().collect();
+    rooms.sort();
+    let rooms: Vec<_> = rooms
+        .iter()
+        .map(|r| Line::from(r.as_str()).left_aligned())
+        .collect();
+
+    let visited_rooms = Paragraph::new(rooms)
+        .block(block)
+        .left_aligned()
+        .fg(app.fg_color_room())
+        .bg(Color::Black)
+        .wrap(Wrap { trim: true });
+    frame.render_widget(visited_rooms, left_main_layout[2]);
 
     // collected items
     if app.collected_items.is_empty() {

@@ -1,4 +1,7 @@
+use std::collections::HashSet;
+
 use super::{AppEvent, Event, EventHandler, IntCodeHandler, ShipRoom, ui};
+use color_eyre::eyre::bail;
 use ratatui::{
     DefaultTerminal,
     crossterm::event::{KeyCode, KeyEvent, KeyModifiers},
@@ -41,15 +44,6 @@ impl ActiveArea {
             }
         }
     }
-    pub fn secondary_navigation_text(&self) -> &str {
-        match self {
-            ActiveArea::Room => "",
-            ActiveArea::ItemsOfRoom => "",
-            ActiveArea::CollectedItems => {
-                "Compare collected items with inventory from int code with: i."
-            }
-        }
-    }
 }
 
 /// Application.
@@ -63,16 +57,20 @@ pub struct App {
     pub int_code_handler: IntCodeHandler,
     /// active area
     pub active_area: ActiveArea,
-    /// error message
-    pub error_message: String,
+    /// last received text message
+    pub last_text_message: String,
     /// current ship room
     pub ship_room: Option<ShipRoom>,
+    /// visited rooms
+    pub visited_rooms: HashSet<String>,
     /// list state for items of room
     pub state_items_of_room: ListState,
     /// collected items
     pub collected_items: Vec<String>,
     /// list state for collected items
     pub state_collected_items: ListState,
+    /// flag for check of inventory
+    pub flag_check_inventory: bool,
 }
 
 impl Default for App {
@@ -83,11 +81,13 @@ impl Default for App {
             events: EventHandler::new(int_code_task),
             int_code_handler,
             active_area: ActiveArea::Room,
-            error_message: String::new(),
+            last_text_message: String::new(),
             ship_room: None,
+            visited_rooms: HashSet::new(),
             state_items_of_room: ListState::default(),
             collected_items: Vec::new(),
             state_collected_items: ListState::default(),
+            flag_check_inventory: false,
         }
     }
 }
@@ -131,11 +131,15 @@ impl App {
                     } else {
                         self.state_items_of_room.select_first();
                     }
+                    self.visited_rooms.insert(ship_room.name.clone());
                     self.ship_room = Some(ship_room);
-                    self.error_message.clear();
+                    self.last_text_message.clear();
                 }
-                AppEvent::ErrorMessage(err) => {
-                    self.error_message = err;
+                AppEvent::TextMessage(text) => {
+                    self.last_text_message = text;
+                    if self.flag_check_inventory {
+                        self.check_inventory()?;
+                    }
                 }
                 AppEvent::Up => {
                     self.int_code_handler.move_up()?;
@@ -166,6 +170,9 @@ impl App {
                 }
                 AppEvent::DropCollectedItem => {
                     self.drop_collected_item()?;
+                }
+                AppEvent::CheckInventory => {
+                    self.int_code_handler.send_inventory_request()?;
                 }
                 AppEvent::Quit => self.quit(),
             },
@@ -202,6 +209,7 @@ impl App {
             },
             KeyCode::Home => self.active_area = self.active_area.left(),
             KeyCode::End => self.active_area = self.active_area.right(),
+            KeyCode::Char('i') => self.events.send(AppEvent::CheckInventory),
             _ => {}
         }
         Ok(())
@@ -264,6 +272,29 @@ impl App {
             self.ship_room.as_mut().unwrap().items.push(collected_item);
             self.state_items_of_room.select(Some(selected_room_item));
         }
+        Ok(())
+    }
+
+    pub fn check_inventory(&mut self) -> color_eyre::Result<()> {
+        let err = if let Some(inventory) = self
+            .last_text_message
+            .strip_prefix("Items in your inventory:\n")
+        {
+            let inventory: HashSet<_> = inventory
+                .lines()
+                .filter_map(|i| i.strip_prefix("- "))
+                .collect();
+            let collected_items: HashSet<_> =
+                self.collected_items.iter().map(|ci| ci.as_str()).collect();
+            inventory != collected_items
+        } else {
+            // empty inventory -> err if we have collected items
+            !self.collected_items.is_empty()
+        };
+        if err {
+            bail!("inventory is not equal to collected items.");
+        }
+        self.flag_check_inventory = false;
         Ok(())
     }
 

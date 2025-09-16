@@ -68,6 +68,12 @@ impl IntCodeHandler {
         self.in_sender.send('\n' as i64)?;
         Ok(())
     }
+    pub fn send_inventory_request(&mut self) -> color_eyre::Result<()> {
+        for ch in "inv\n".chars() {
+            self.in_sender.send(ch as i64)?;
+        }
+        Ok(())
+    }
 }
 
 pub struct IntCodeTask {
@@ -94,7 +100,7 @@ impl IntCodeTask {
                                 let _ = sender.send(Event::App(AppEvent::ShipRoom(ship_room)));
                             }
                             Err(err) => {
-                                let _ = sender.send(Event::App(AppEvent::ErrorMessage(err)));
+                                let _ = sender.send(Event::App(AppEvent::TextMessage(err)));
                             }
                         }
                         message.clear();
@@ -144,7 +150,7 @@ impl TryFrom<&str> for ShipRoom {
             }
             Ok(ship_room)
         } else {
-            let err_message = value.trim().split('\n').next().unwrap();
+            let err_message = value.trim().strip_suffix("Command?").unwrap().trim();
             Err(err_message.to_string())
         }
     }

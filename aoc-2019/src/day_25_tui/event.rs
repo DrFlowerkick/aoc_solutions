@@ -32,8 +32,8 @@ pub enum Event {
 /// You can extend this enum with your own custom events.
 #[derive(Clone, Debug)]
 pub enum AppEvent {
-    /// receive error message from Int Code for invalid Command
-    ErrorMessage(String),
+    /// receive text message from Int Code (may be error message, drop item message, etc.)
+    TextMessage(String),
     /// current ship room
     ShipRoom(ShipRoom),
     /// move up
@@ -56,6 +56,8 @@ pub enum AppEvent {
     NextCollectedItem,
     /// drop collected item o current room
     DropCollectedItem,
+    /// check collected items against inventory of int code
+    CheckInventory,
     /// Quit the application.
     Quit,
 }
