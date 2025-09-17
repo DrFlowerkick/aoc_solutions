@@ -36,6 +36,9 @@ pub fn run() -> Result<()> {
     days::day_22::solution()?;
     days::day_23::solution()?;
     days::day_24::solution()?;
+    println!(
+        "Use day_25_tui to solve day 25. Hint: the crawler in the tui solves it automatically for you. Happy Christmas🎄🎁🎁🎁"
+    );
 
     Ok(())
 }

@@ -1,7 +1,7 @@
 // int code handling in day 25
 
 use super::{AppEvent, Event};
-use crate::days::day_05::IntCodeComputer;
+use crate::days::day_05::{IntCodeComputer, IntOut};
 use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender, error::TryRecvError};
@@ -77,7 +77,7 @@ impl IntCodeHandler {
 }
 
 pub struct IntCodeTask {
-    out_receiver: UnboundedReceiver<(i64, i64)>,
+    out_receiver: UnboundedReceiver<Result<(i64, IntOut), String>>,
 }
 
 impl IntCodeTask {
@@ -86,25 +86,65 @@ impl IntCodeTask {
         sender: mpsc::UnboundedSender<Event>,
     ) -> color_eyre::Result<()> {
         let mut message = String::new();
+        let mut found_santa = false;
         loop {
             match self.out_receiver.try_recv() {
-                Ok((_id, value)) => {
+                Ok(Ok((_id, IntOut::Out(value)))) => {
                     if value > 255 {
-                        color_eyre::eyre::bail!("received none ascii char");
-                    }
-                    let ch = (value as u8) as char;
-                    message.push(ch);
-                    if message.ends_with("Command?") {
-                        match ShipRoom::try_from(message.as_str()) {
-                            Ok(ship_room) => {
-                                let _ = sender.send(Event::App(AppEvent::ShipRoom(ship_room)));
+                        let _ = sender.send(Event::App(AppEvent::NoneAscii(value)));
+                    } else {
+                        let ch = (value as u8) as char;
+                        message.push(ch);
+                        if message.ends_with("main airlock.") {
+                            // reached end
+                            let _ = sender.send(Event::App(AppEvent::ShipRoom(
+                                ShipRoom::try_from(message.as_str()).unwrap(),
+                            )));
+                            found_santa = true;
+                        } else if message.ends_with("Command?") {
+                            // send raw string
+                            let _ = sender.send(Event::App(AppEvent::RawMessage(message.clone())));
+                            // handle == Pressure-Sensitive Floor ==
+                            if message.trim().starts_with("== Pressure-Sensitive Floor ==")
+                                && let Some(pos) = message.find("== Security Checkpoint ==")
+                            {
+                                // robot did not pass == Pressure-Sensitive Floor ==
+                                // and was ejected back to == Security Checkpoint ==
+                                let (ps, sc) = message.split_at(pos);
+                                let _ = sender.send(Event::App(AppEvent::ShipRoom(
+                                    ShipRoom::try_from(ps).unwrap(),
+                                )));
+                                message = sc.to_string();
                             }
-                            Err(err) => {
-                                let _ = sender.send(Event::App(AppEvent::TextMessage(err)));
+                            match ShipRoom::try_from(message.as_str()) {
+                                Ok(ship_room) => {
+                                    let _ = sender.send(Event::App(AppEvent::ShipRoom(ship_room)));
+                                }
+                                Err(err) => {
+                                    let _ = sender.send(Event::App(AppEvent::TextMessage(err)));
+                                }
                             }
+                            message.clear();
                         }
-                        message.clear();
                     }
+                }
+                Ok(Ok((_, IntOut::Halt))) => {
+                    if found_santa {
+                        let code: String = message.chars().filter(|c| c.is_ascii_digit()).collect();
+                        let _ = sender.send(Event::App(AppEvent::TextMessage(format!(
+                            "Code for main airlock: {code}\nGame Ends here\nHappy Christmas🎄🎁🎁🎁"
+                        ))));
+                    } else {
+                        let _ = sender.send(Event::App(AppEvent::TextMessage(
+                            "unexpected halt of Int Computer.".into(),
+                        )));
+                    }
+                }
+                Ok(Ok((_, IntOut::None))) => unreachable!(),
+                Ok(Err(err)) => {
+                    let _ = sender.send(Event::App(AppEvent::TextMessage(format!(
+                        "Int Computer returned error:\n{err}"
+                    ))));
                 }
                 Err(TryRecvError::Empty) => {
                     thread::sleep(Duration::from_millis(1));
@@ -121,6 +161,7 @@ pub struct ShipRoom {
     pub description: String,
     pub doors: Vec<String>,
     pub items: Vec<String>,
+    pub message: String,
 }
 
 impl TryFrom<&str> for ShipRoom {
@@ -146,12 +187,14 @@ impl TryFrom<&str> for ShipRoom {
                         .filter_map(|d| d.strip_prefix("- "))
                         .map(|d| d.to_string())
                         .collect();
+                } else if block != "Command?" {
+                    ship_room.message = block.to_string();
                 }
             }
             Ok(ship_room)
         } else {
-            let err_message = value.trim().strip_suffix("Command?").unwrap().trim();
-            Err(err_message.to_string())
+            let no_ship_room_message = value.trim().strip_suffix("Command?").unwrap().trim();
+            Err(no_ship_room_message.to_string())
         }
     }
 }

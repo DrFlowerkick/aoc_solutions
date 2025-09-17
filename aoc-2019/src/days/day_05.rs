@@ -1,12 +1,12 @@
 //!day_05.rs
 
 use anyhow::Result;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, error::TryRecvError};
 
-enum IntOut {
+pub enum IntOut {
     None,
     Out(i64),
     Halt,
@@ -131,13 +131,23 @@ impl IntCodeComputer {
             1 => {
                 // addition
                 let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                self.set(parameters[2], parameters[0] + parameters[1])?;
+                self.set(
+                    parameters[2],
+                    parameters[0]
+                        .checked_add(parameters[1])
+                        .ok_or(String::from("checked_add overflow"))?,
+                )?;
                 self.index += 4;
             }
             2 => {
                 // multiplication
                 let parameters = self.get_n_parameters(parameter_modes, 3, true)?;
-                self.set(parameters[2], parameters[0] * parameters[1])?;
+                self.set(
+                    parameters[2],
+                    parameters[0]
+                        .checked_mul(parameters[1])
+                        .ok_or(String::from("checked_mul overflow"))?,
+                )?;
                 self.index += 4;
             }
             3 => {
@@ -285,17 +295,25 @@ impl IntCodeComputer {
     pub fn run_int_code_with_mpsc(
         &mut self,
         mut in_receiver: UnboundedReceiver<i64>,
-        out_sender: UnboundedSender<(i64, i64)>,
+        out_sender: UnboundedSender<Result<(i64, IntOut), String>>,
         default_if_empty: Option<i64>,
         sleep_if_empty: Duration,
     ) -> Result<(), String> {
+        let loop_length = 100_000;
+        let mut op_code_queue: VecDeque<(i64, i64)> = VecDeque::with_capacity(loop_length + 1);
+        let mut endless_loop_detector: HashSet<VecDeque<(i64, i64)>> =
+            HashSet::with_capacity(loop_length + 1);
         while let Some(ext_op_code) = self.numbers.get(&self.index) {
             let op_code = ext_op_code % 100;
             let parameter_modes = ext_op_code / 100;
 
             let input = if op_code == 3 {
                 match in_receiver.try_recv() {
-                    Ok(input) => input,
+                    Ok(input) => {
+                        op_code_queue.clear();
+                        endless_loop_detector.clear();
+                        input
+                    }
                     Err(TryRecvError::Empty) => {
                         // wait a short time
                         thread::sleep(sleep_if_empty);
@@ -311,14 +329,38 @@ impl IntCodeComputer {
             } else {
                 0
             };
-            match self.execute_opcode(op_code, parameter_modes, input)? {
-                IntOut::None => (),
-                IntOut::Out(out) => {
-                    if out_sender.send((self.id, out)).is_err() {
-                        return Ok(());
+            if default_if_empty.is_none() {
+                op_code_queue.push_front((*ext_op_code, self.index));
+                if op_code_queue.len() > loop_length {
+                    op_code_queue.pop_back();
+                    if !endless_loop_detector.insert(op_code_queue.clone()) {
+                        let err = String::from("detected endless loop");
+                        out_sender
+                            .send(Err(err.clone()))
+                            .map_err(|err| format!("{err}"))?;
+                        return Err(err);
                     }
                 }
-                IntOut::Halt => break,
+            }
+            match self.execute_opcode(op_code, parameter_modes, input) {
+                Ok(IntOut::None) => (),
+                Ok(IntOut::Out(out)) => {
+                    out_sender
+                        .send(Ok((self.id, IntOut::Out(out))))
+                        .map_err(|err| format!("{err}"))?;
+                }
+                Ok(IntOut::Halt) => {
+                    out_sender
+                        .send(Ok((self.id, IntOut::Halt)))
+                        .map_err(|err| format!("{err}"))?;
+                    break;
+                }
+                Err(err) => {
+                    out_sender
+                        .send(Err(err.clone()))
+                        .map_err(|err| format!("{err}"))?;
+                    return Err(err);
+                }
             }
         }
         Ok(())

@@ -35,7 +35,7 @@ impl ActiveArea {
             ActiveArea::Crawler => ActiveArea::Room,
         }
     }
-    pub fn navigation_text(&self) -> &str {
+    pub fn navigation_text(&self, active_crawler: bool) -> &str {
         match self {
             ActiveArea::Room => {
                 "Try door west with ◄ / Left, north with ▲ / Up, south with ▼ / Down east with ► / Right."
@@ -46,7 +46,13 @@ impl ActiveArea {
             ActiveArea::CollectedItems => {
                 "Select previous item with ▲ / Up, next item with ▼ / Down, drop item to room with ◄ / Left."
             }
-            ActiveArea::Crawler => "Activate / Deactivate crawler with Enter.",
+            ActiveArea::Crawler => {
+                if active_crawler {
+                    "Deactivate crawler with Enter."
+                } else {
+                    "Activate crawler with Enter."
+                }
+            }
         }
     }
 }
@@ -64,6 +70,8 @@ pub struct App {
     pub active_area: ActiveArea,
     /// last received text message
     pub last_text_message: String,
+    /// last received raw message
+    pub last_raw_message: String,
     /// current ship room
     pub ship_room: Option<ShipRoom>,
     /// visited rooms
@@ -91,6 +99,7 @@ impl Default for App {
             int_code_handler,
             active_area: ActiveArea::Room,
             last_text_message: String::new(),
+            last_raw_message: String::new(),
             ship_room: None,
             visited_rooms: HashSet::new(),
             state_items_of_room: ListState::default(),
@@ -146,16 +155,31 @@ impl App {
                     self.visited_rooms.insert(ship_room.name.clone());
                     self.ship_room = Some(ship_room);
                     self.last_text_message.clear();
-                    self.room_crawler
-                        .enter_room(&mut self.events, &self.ship_room);
+                    self.room_crawler.enter_room(
+                        &mut self.events,
+                        &self.ship_room,
+                        &self.collected_items,
+                        &mut self.state_collected_items,
+                    );
                 }
                 AppEvent::TextMessage(text) => {
-                    self.room_crawler
-                        .collect_message(&text, &mut self.events, &self.ship_room);
+                    self.room_crawler.collect_message(
+                        &text,
+                        &mut self.events,
+                        &self.ship_room,
+                        &self.collected_items,
+                        &mut self.state_collected_items,
+                    );
                     self.last_text_message = text;
                     if self.flag_check_inventory {
                         self.check_inventory()?;
                     }
+                }
+                AppEvent::RawMessage(raw) => {
+                    self.last_raw_message = raw;
+                }
+                AppEvent::NoneAscii(_non_ascii) => {
+                    todo!("non ascii event not detected, yet.")
                 }
                 AppEvent::Up => {
                     self.int_code_handler.move_up()?;
@@ -245,34 +269,35 @@ impl App {
                     self.events.send(AppEvent::CheckInventory);
                 }
             }
-            KeyCode::Enter => match self.active_area {
-                ActiveArea::Crawler => self.room_crawler.toggle_status(
-                    &mut self.events,
-                    &self.ship_room,
-                    self.sleepy_room_crawler,
-                ),
-                _ => {}
-            },
-            KeyCode::PageUp => match self.active_area {
-                ActiveArea::Crawler => {
+            KeyCode::Enter => {
+                if let ActiveArea::Crawler = self.active_area {
+                    self.room_crawler.toggle_status(
+                        &mut self.events,
+                        &self.ship_room,
+                        &self.collected_items,
+                        &mut self.state_collected_items,
+                        self.sleepy_room_crawler,
+                    )
+                }
+            }
+            KeyCode::PageUp => {
+                if let ActiveArea::Crawler = self.active_area {
                     self.room_crawler.scroll = self.room_crawler.scroll.saturating_sub(1);
                     self.room_crawler.scroll_state = self
                         .room_crawler
                         .scroll_state
                         .position(self.room_crawler.scroll);
                 }
-                _ => {}
-            },
-            KeyCode::PageDown => match self.active_area {
-                ActiveArea::Crawler => {
+            }
+            KeyCode::PageDown => {
+                if let ActiveArea::Crawler = self.active_area {
                     self.room_crawler.scroll = self.room_crawler.scroll.saturating_add(1);
                     self.room_crawler.scroll_state = self
                         .room_crawler
                         .scroll_state
                         .position(self.room_crawler.scroll);
                 }
-                _ => {}
-            },
+            }
             _ => {}
         }
         Ok(())
@@ -322,8 +347,13 @@ impl App {
             self.state_items_of_room.select_previous();
             let room_item = self.ship_room.as_mut().unwrap().items.remove(selected);
             self.int_code_handler.take_room_item(&room_item)?;
-            let selected_collected_item = self.collected_items.len();
-            self.collected_items.push(room_item);
+            self.collected_items.push(room_item.clone());
+            self.collected_items.sort();
+            let selected_collected_item = self
+                .collected_items
+                .iter()
+                .position(|i| *i == room_item)
+                .unwrap();
             self.state_collected_items
                 .select(Some(selected_collected_item));
         }
@@ -338,8 +368,20 @@ impl App {
             self.state_collected_items.select_previous();
             let collected_item = self.collected_items.remove(selected);
             self.int_code_handler.drop_collected_item(&collected_item)?;
-            let selected_room_item = self.ship_room.as_ref().unwrap().items.len();
-            self.ship_room.as_mut().unwrap().items.push(collected_item);
+            self.ship_room
+                .as_mut()
+                .unwrap()
+                .items
+                .push(collected_item.clone());
+            self.ship_room.as_mut().unwrap().items.sort();
+            let selected_room_item = self
+                .ship_room
+                .as_ref()
+                .unwrap()
+                .items
+                .iter()
+                .position(|i| *i == collected_item)
+                .unwrap();
             self.state_items_of_room.select(Some(selected_room_item));
         }
         Ok(())

@@ -1,6 +1,6 @@
 //!day_23.rs
 
-use super::day_05::IntCodeComputer;
+use super::day_05::{IntCodeComputer, IntOut};
 use anyhow::Result;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::thread;
@@ -13,7 +13,7 @@ impl Nic {
     fn boot(
         mut code: IntCodeComputer,
         address: i64,
-        out_sender: UnboundedSender<(i64, i64)>,
+        out_sender: UnboundedSender<Result<(i64, IntOut), String>>,
         sleep_if_empty: Duration,
     ) -> UnboundedSender<i64> {
         let (tx, receiver) = mpsc::unbounded_channel();
@@ -31,8 +31,8 @@ impl Nic {
 
 struct ChallengeInput {
     code: IntCodeComputer,
-    rx: UnboundedReceiver<(i64, i64)>,
-    tx: UnboundedSender<(i64, i64)>,
+    rx: UnboundedReceiver<Result<(i64, IntOut), String>>,
+    tx: UnboundedSender<Result<(i64, IntOut), String>>,
     sleep_if_empty: Duration,
 }
 
@@ -68,20 +68,27 @@ impl ChallengeInput {
             nic_queues.insert(*key, VecDeque::new());
         }
         loop {
-            while let Ok((addr, out)) = self.rx.try_recv() {
-                if let Some(nic_queue) = nic_queues.get_mut(&addr) {
-                    nic_queue.push_back(out);
-                    if nic_queue.len() == 3 {
-                        let target_addr = nic_queue.pop_front().unwrap();
-                        if let Some(target_sender) = nic_input_senders.get(&target_addr) {
-                            while let Some(input) = nic_queue.pop_front() {
-                                target_sender.send(input).unwrap();
+            while let Ok(message) = self.rx.try_recv() {
+                match message {
+                    Ok((addr, IntOut::Out(out))) => {
+                        if let Some(nic_queue) = nic_queues.get_mut(&addr) {
+                            nic_queue.push_back(out);
+                            if nic_queue.len() == 3 {
+                                let target_addr = nic_queue.pop_front().unwrap();
+                                if let Some(target_sender) = nic_input_senders.get(&target_addr) {
+                                    while let Some(input) = nic_queue.pop_front() {
+                                        target_sender.send(input).unwrap();
+                                    }
+                                } else if target_addr == 255 {
+                                    nic_queue.pop_front();
+                                    return Ok(nic_queue.pop_front().unwrap());
+                                }
                             }
-                        } else if target_addr == 255 {
-                            nic_queue.pop_front();
-                            return Ok(nic_queue.pop_front().unwrap());
                         }
                     }
+                    Ok((_, IntOut::Halt)) => panic!("unexpected halt of Int Computer."),
+                    Ok((_, IntOut::None)) => unreachable!(),
+                    Err(err) => panic!("Int Computer returned error:\n{err}"),
                 }
             }
         }
@@ -109,7 +116,7 @@ impl ChallengeInput {
         let mut check_queues = -1;
         loop {
             match self.rx.try_recv() {
-                Ok((addr, out)) => {
+                Ok(Ok((addr, IntOut::Out(out)))) => {
                     if let Some(nic_queue) = nic_queues.get_mut(&addr) {
                         nic_queue.push_back(out);
                         if nic_queue.len() == 3 {
@@ -127,6 +134,9 @@ impl ChallengeInput {
                         }
                     }
                 }
+                Ok(Ok((_, IntOut::Halt))) => panic!("unexpected halt of Int Computer."),
+                Ok(Ok((_, IntOut::None))) => unreachable!(),
+                Ok(Err(err)) => panic!("Int Computer returned error:\n{err}"),
                 Err(TryRecvError::Empty) => {
                     if check_queues == 10 {
                         check_queues = -1;

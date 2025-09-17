@@ -53,7 +53,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
 
     let text = vec![
         Line::from(first_line),
-        Line::from(app.active_area.navigation_text()),
+        Line::from(app.active_area.navigation_text(app.room_crawler.active)),
         Line::from("Compare collected items with inventory from int code with: i."),
         Line::from("Press `Esc`, `Ctrl-C` or `q` to stop running."),
     ];
@@ -70,12 +70,14 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         .direction(Direction::Horizontal)
         .constraints(vec![
             Constraint::Percentage(40),
-            Constraint::Percentage(30),
-            Constraint::Percentage(30),
+            Constraint::Percentage(20),
+            Constraint::Percentage(20),
+            Constraint::Percentage(20),
         ])
         .split(vertical[1]);
     let area_items_in_room = main_layout_top[1];
     let area_collected_items = main_layout_top[2];
+    let area_visited_rooms = main_layout_top[3];
 
     let left_main_layout_top = Layout::default()
         .direction(Direction::Vertical)
@@ -88,7 +90,7 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         .direction(Direction::Horizontal)
         .constraints(vec![Constraint::Percentage(40), Constraint::Percentage(60)])
         .split(vertical[2]);
-    let area_visited_rooms = main_layout_bottom[0];
+    let area_raw_message = main_layout_bottom[0];
     let area_crawler_messages = main_layout_bottom[1];
 
     // ship room
@@ -116,6 +118,10 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
             };
             text.push(Line::from(door).left_aligned());
         }
+        text.push(Line::from(""));
+        let message = Line::from(ship_room.message.as_str()).bold().left_aligned();
+        text.push(message);
+
         let room = Paragraph::new(text)
             .block(block)
             .fg(app.fg_color_room())
@@ -176,6 +182,19 @@ pub fn ui(frame: &mut Frame, app: &mut App) {
         .bg(Color::Black)
         .wrap(Wrap { trim: true });
     frame.render_widget(message, area_last_message);
+
+    // last raw message
+    let block = Block::bordered()
+        .title(" Last raw message from robot ")
+        .title_alignment(Alignment::Left)
+        .border_type(BorderType::Rounded);
+    let raw_message = Paragraph::new(app.last_raw_message.as_str().trim())
+        .block(block)
+        .left_aligned()
+        .fg(Color::Cyan)
+        .bg(Color::Black)
+        .wrap(Wrap { trim: true });
+    frame.render_widget(raw_message, area_raw_message);
 
     // visited rooms
     let block = Block::bordered()

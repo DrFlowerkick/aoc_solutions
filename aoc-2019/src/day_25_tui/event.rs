@@ -34,8 +34,12 @@ pub enum Event {
 pub enum AppEvent {
     /// receive text message from Int Code (may be error message, drop item message, etc.)
     TextMessage(String),
+    /// raw message from int code computer
+    RawMessage(String),
     /// current ship room
     ShipRoom(ShipRoom),
+    /// received non ascii value
+    NoneAscii(i64),
     /// move up
     Up,
     /// move down

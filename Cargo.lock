@@ -845,8 +845,8 @@ dependencies = [
 
 [[package]]
 name = "my_lib"
-version = "0.15.2"
-source = "git+https://github.com/DrFlowerkick/mylib?branch=main#8aacff5f48ed868fb444bfc250163e9b3f8afd50"
+version = "0.15.3"
+source = "git+https://github.com/DrFlowerkick/mylib?branch=main#43e866d5ff42f3f37c5833be10eb4204d30474a8"
 dependencies = [
  "anyhow",
  "chrono",
