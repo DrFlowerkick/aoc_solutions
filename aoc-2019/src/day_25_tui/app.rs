@@ -181,17 +181,20 @@ impl App {
                 AppEvent::NoneAscii(_non_ascii) => {
                     todo!("non ascii event not detected, yet.")
                 }
+                AppEvent::IntCodeHalt => {
+                    self.room_crawler.active = false;
+                }
                 AppEvent::Up => {
-                    self.int_code_handler.move_up()?;
+                    let _ = self.int_code_handler.move_up();
                 }
                 AppEvent::Down => {
-                    self.int_code_handler.move_down()?;
+                    let _ = self.int_code_handler.move_down();
                 }
                 AppEvent::Right => {
-                    self.int_code_handler.move_right()?;
+                    let _ = self.int_code_handler.move_right();
                 }
                 AppEvent::Left => {
-                    self.int_code_handler.move_left()?;
+                    let _ = self.int_code_handler.move_left();
                 }
                 AppEvent::PreviousRoomItem => {
                     self.state_items_of_room.select_previous();
@@ -206,13 +209,13 @@ impl App {
                     self.state_collected_items.select_next();
                 }
                 AppEvent::TakeRoomItem => {
-                    self.take_room_item()?;
+                    let _ = self.take_room_item();
                 }
                 AppEvent::DropCollectedItem => {
-                    self.drop_collected_item()?;
+                    let _ = self.drop_collected_item();
                 }
                 AppEvent::CheckInventory => {
-                    self.int_code_handler.send_inventory_request()?;
+                    let _ = self.int_code_handler.send_inventory_request();
                 }
                 AppEvent::Quit => self.quit(),
             },

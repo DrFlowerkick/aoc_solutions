@@ -15,12 +15,16 @@ impl IntCodeHandler {
     pub fn new() -> (Self, IntCodeTask) {
         let (in_sender, in_receiver) = mpsc::unbounded_channel();
         let (out_sender, out_receiver) = mpsc::unbounded_channel();
+        let err_sender = out_sender.clone();
 
         thread::spawn(move || {
             let input = include_str!("../../../../aoc_input/aoc-2019/day_25.txt");
             let mut code = IntCodeComputer::from(input);
-            code.run_int_code_with_mpsc(in_receiver, out_sender, None, Duration::from_millis(1))
-                .unwrap();
+            if let Err(err) =
+                code.run_int_code_with_mpsc(in_receiver, out_sender, None, Duration::from_millis(1))
+            {
+                let _ = err_sender.send(Err(err));
+            }
         });
         (Self { in_sender }, IntCodeTask { out_receiver })
     }
@@ -86,7 +90,6 @@ impl IntCodeTask {
         sender: mpsc::UnboundedSender<Event>,
     ) -> color_eyre::Result<()> {
         let mut message = String::new();
-        let mut found_santa = false;
         loop {
             match self.out_receiver.try_recv() {
                 Ok(Ok((_id, IntOut::Out(value)))) => {
@@ -95,13 +98,7 @@ impl IntCodeTask {
                     } else {
                         let ch = (value as u8) as char;
                         message.push(ch);
-                        if message.ends_with("main airlock.") {
-                            // reached end
-                            let _ = sender.send(Event::App(AppEvent::ShipRoom(
-                                ShipRoom::try_from(message.as_str()).unwrap(),
-                            )));
-                            found_santa = true;
-                        } else if message.ends_with("Command?") {
+                        if message.ends_with("Command?") {
                             // send raw string
                             let _ = sender.send(Event::App(AppEvent::RawMessage(message.clone())));
                             // handle == Pressure-Sensitive Floor ==
@@ -129,21 +126,31 @@ impl IntCodeTask {
                     }
                 }
                 Ok(Ok((_, IntOut::Halt))) => {
-                    if found_santa {
+                    if message.trim().ends_with("main airlock.\"") {
+                        // reached end
+                        let _ = sender.send(Event::App(AppEvent::ShipRoom(
+                            ShipRoom::try_from(message.as_str()).unwrap(),
+                        )));
                         let code: String = message.chars().filter(|c| c.is_ascii_digit()).collect();
                         let _ = sender.send(Event::App(AppEvent::TextMessage(format!(
                             "Code for main airlock: {code}\nGame Ends here\nHappy Christmas🎄🎁🎁🎁"
+                        ))));
+                    } else if !message.is_empty() {
+                        let _ = sender.send(Event::App(AppEvent::TextMessage(format!(
+                            "{}\nGame ends. You lost.",
+                            message.trim()
                         ))));
                     } else {
                         let _ = sender.send(Event::App(AppEvent::TextMessage(
                             "unexpected halt of Int Computer.".into(),
                         )));
                     }
+                    let _ = sender.send(Event::App(AppEvent::IntCodeHalt));
                 }
                 Ok(Ok((_, IntOut::None))) => unreachable!(),
                 Ok(Err(err)) => {
                     let _ = sender.send(Event::App(AppEvent::TextMessage(format!(
-                        "Int Computer returned error:\n{err}"
+                        "Int Computer returned error:\n{err}\nGame ends. You lost."
                     ))));
                 }
                 Err(TryRecvError::Empty) => {

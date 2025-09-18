@@ -185,9 +185,9 @@ impl RoomCrawler {
                     let ignore_bad_items = [
                         "escape pod",
                         "infinite loop",
+                        "giant electromagnet",
                         "molten lava",
                         "photons",
-                        "giant electromagnet",
                     ];
                     if sh.items.is_empty()
                         || sh

@@ -40,6 +40,8 @@ pub enum AppEvent {
     ShipRoom(ShipRoom),
     /// received non ascii value
     NoneAscii(i64),
+    /// received non ascii value
+    IntCodeHalt,
     /// move up
     Up,
     /// move down
