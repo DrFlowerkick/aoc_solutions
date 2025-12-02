@@ -9,7 +9,7 @@ struct ChallengeInput {
 impl From<&str> for ChallengeInput {
     fn from(value: &str) -> Self {
         ChallengeInput {
-            rotations: value.lines().map(|n| (n.chars().next().unwrap() == 'R', n[1..].parse().unwrap())).collect(),
+            rotations: value.lines().map(|n| (n.starts_with('R'), n[1..].parse().unwrap())).collect(),
         }
     }
 }
