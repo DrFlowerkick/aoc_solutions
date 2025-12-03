@@ -24,7 +24,7 @@ impl ChallengeInput {
         for (start, end) in self.ranges.iter() {
             for id in *start..=*end {
                 let str_id = format!("{id}");
-                let num_digits = str_id.chars().count();
+                let num_digits = str_id.len();
                 if num_digits % 2 == 1 {
                     continue;
                 }
@@ -41,7 +41,7 @@ impl ChallengeInput {
         for (start, end) in self.ranges.iter() {
             'id_loop: for id in *start..=*end {
                 let str_id = format!("{id}");
-                let num_digits = str_id.chars().count();
+                let num_digits = str_id.len();
                 'pattern_loop: for sample_len in 1..=num_digits / 2 {
                     if num_digits % sample_len == 0 {
                         let pattern = &str_id[0..sample_len];
