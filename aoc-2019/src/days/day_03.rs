@@ -83,11 +83,7 @@ impl ChallengeInput {
         let intersections = self.wire_1.get_intersections(&self.wire_2);
 
         (
-            intersections
-                .keys()
-                .map(|p| p.delta((0, 0).into()))
-                .min()
-                .unwrap(),
+            intersections.keys().map(|p| p.delta((0, 0))).min().unwrap(),
             *intersections.values().min().unwrap(),
         )
     }

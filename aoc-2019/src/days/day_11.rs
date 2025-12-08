@@ -84,7 +84,7 @@ impl ChallengeInput {
                 '>' => (1, 0),
                 _ => unreachable!(),
             };
-            current = current.add(direction.into());
+            current = current.add(direction);
         }
         Ok(())
     }

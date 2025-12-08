@@ -73,7 +73,7 @@ impl ChallengeInput {
                 b.iter().map(move |beacon| {
                     beacon
                         .apply_rotation_combination(rotation_combination)
-                        .add(&scanner_position)
+                        .add(scanner_position)
                 })
             })
             .collect();
@@ -93,7 +93,7 @@ impl ChallengeInput {
                 .filter_map(|sp| *sp)
                 .skip(index + 1)
             {
-                let delta = scanner_position_1.subtract(&scanner_position_2);
+                let delta = scanner_position_1.subtract(scanner_position_2);
                 max_distance = max_distance.max(delta.x.abs() + delta.y.abs() + delta.z.abs());
             }
         }
@@ -104,7 +104,7 @@ impl ChallengeInput {
             let mut fingerprint: Fingerprint = HashMap::new();
             for (index, beacon_a) in self.beacons[scanner_index].iter().enumerate() {
                 for beacon_b in self.beacons[scanner_index].iter().skip(index + 1) {
-                    let delta = beacon_a.subtract(beacon_b);
+                    let delta = beacon_a.subtract(*beacon_b);
                     *fingerprint
                         .entry(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z)
                         .or_default() += 1;
@@ -144,11 +144,11 @@ impl ChallengeInput {
                 // we want all points be in the same orientation of the first sensor set
                 let point_a = point_a
                     .apply_rotation_combination(scanner_rotation)
-                    .add(&scanner_position);
+                    .add(scanner_position);
                 for index_2_b in 0..self.beacons[index_2].len() {
                     let point_b = self.beacons[index_2][index_2_b];
                     let point_b = point_b.apply_rotation_combination(rotation_combination);
-                    let translation = point_a.subtract(&point_b);
+                    let translation = point_a.subtract(point_b);
                     *translation_count.entry(translation).or_default() += 1;
                 }
             }

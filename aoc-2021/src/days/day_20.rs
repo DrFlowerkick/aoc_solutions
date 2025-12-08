@@ -41,8 +41,8 @@ impl Image {
     fn generate_child(&self, algo: &FixedBitSet) -> Self {
         let mut child = Image {
             pixels: HashSet::new(),
-            top_left: self.top_left.add((-1, -1).into()),
-            bottom_right: self.bottom_right.add((1, 1).into()),
+            top_left: self.top_left.add((-1, -1)),
+            bottom_right: self.bottom_right.add((1, 1)),
             outside_light: self.outside_light ^ algo[0],
         };
         for y in child.top_left.y..=child.bottom_right.y {
@@ -60,7 +60,7 @@ impl Image {
         for dy in -1..=1 {
             for dx in -1..=1 {
                 index <<= 1;
-                let new_pixel = pixel.add((dx, dy).into());
+                let new_pixel = pixel.add((dx, dy));
                 let outside_value = (new_pixel.x < self.top_left.x
                     || new_pixel.x > self.bottom_right.x
                     || new_pixel.y < self.top_left.y

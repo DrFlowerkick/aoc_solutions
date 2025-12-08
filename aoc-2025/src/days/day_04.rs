@@ -51,7 +51,7 @@ impl ChallengeInput {
                     (1, -1),
                 ]
                 .into_iter()
-                .filter_map(|n| self.paper_rolls.get(&p.add(n.into())))
+                .filter_map(|n| self.paper_rolls.get(&p.add(n)))
                 .count()
                     < 4
             })

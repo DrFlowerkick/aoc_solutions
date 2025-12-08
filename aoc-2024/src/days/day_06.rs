@@ -156,10 +156,12 @@ mod tests {
         println!("result day 06 part 1: {}", result_part1);
         assert_eq!(result_part1, 41);
 
-        let result_part2 = challenge.count_possible_loop_blocks(path);
-        println!("result day 06 part 2: {}", result_part2);
-        assert_eq!(result_part2, 6);
-
+        #[cfg(feature = "long-run-time")]
+        {
+            let result_part2 = challenge.count_possible_loop_blocks(path);
+            println!("result day 06 part 2: {}", result_part2);
+            assert_eq!(result_part2, 6);
+        }
         Ok(())
     }
 }

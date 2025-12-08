@@ -82,7 +82,7 @@ impl ChallengeInput {
         let distance = self.map.get(&self.bot).unwrap().distance;
         [(0, 1), (1, 0), (0, -1), (-1, 0)]
             .into_iter()
-            .map(|d| self.bot.add(d.into()))
+            .map(|d| self.bot.add(d))
             .map(|neighbor| {
                 (
                     neighbor,
@@ -134,7 +134,7 @@ impl ChallengeInput {
             path.push_front(current);
             current = [(0, 1), (1, 0), (0, -1), (-1, 0)]
                 .into_iter()
-                .map(|dir| current.add(dir.into()))
+                .map(|dir| current.add(dir))
                 .filter(|n| seen.contains_key(n))
                 .find(|n| *seen.get(n).unwrap() == distance - 1)
                 .unwrap();
@@ -154,7 +154,7 @@ impl ChallengeInput {
             }
             for neighbor in [(0, 1), (1, 0), (0, -1), (-1, 0)]
                 .into_iter()
-                .map(|dir| current.add(dir.into()))
+                .map(|dir| current.add(dir))
                 .filter(|p| self.map.get(p).unwrap().status != 0)
                 .filter(|p| !seen.contains_key(p))
             {

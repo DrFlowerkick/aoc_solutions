@@ -169,12 +169,15 @@ mod tests {
         println!("result example day 11 part 1: {}", result_part1);
         assert_eq!(result_part1, 10_605);
 
-        let mut monkeys: Vec<Monkey> = input.split("\n\n").map(Monkey::from).collect();
-        let super_divisor: i64 = monkeys.iter().map(|m| m.test_divisor).product();
-        let inspection_method = InspectionMethod::Modulo(super_divisor);
-        let result_part2 = play_n_rounds(&mut monkeys, inspection_method, 10_000);
-        println!("result example day 11 part 2: {}", result_part2);
-        assert_eq!(result_part2, 2_713_310_158);
+        #[cfg(feature = "long-run-time")]
+        {
+            let mut monkeys: Vec<Monkey> = input.split("\n\n").map(Monkey::from).collect();
+            let super_divisor: i64 = monkeys.iter().map(|m| m.test_divisor).product();
+            let inspection_method = InspectionMethod::Modulo(super_divisor);
+            let result_part2 = play_n_rounds(&mut monkeys, inspection_method, 10_000);
+            println!("result example day 11 part 2: {}", result_part2);
+            assert_eq!(result_part2, 2_713_310_158);
+        }
         Ok(())
     }
 }

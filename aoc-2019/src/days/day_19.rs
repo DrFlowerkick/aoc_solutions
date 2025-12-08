@@ -69,8 +69,8 @@ impl ChallengeInput {
 
         let mut top_left = Point::new(left_rec as i64, top_rec as i64);
         loop {
-            let right = top_left.add((99, 0).into());
-            let bottom = top_left.add((0, 99).into());
+            let right = top_left.add((99, 0));
+            let bottom = top_left.add((0, 99));
             if !self.pos_is_pulled(right)? {
                 // move down
                 top_left.y += 1;

@@ -24,7 +24,9 @@ fn to_point3d(direction: &str) -> Point3D {
 }
 
 fn neighbors(hex: Point3D) -> impl Iterator<Item = Point3D> {
-    [E, NE, NW, W, SW, SE].iter().map(move |dir| hex.add(dir))
+    [E, NE, NW, W, SW, SE]
+        .into_iter()
+        .map(move |dir| hex.add(dir))
 }
 
 struct ChallengeInput {
@@ -70,7 +72,7 @@ impl ChallengeInput {
                 }
                 _ => panic!("unknown instruction char"),
             };
-            position = position.add(&direction);
+            position = position.add(direction);
             slice_start = slice_end;
             slice_end += 1;
         }

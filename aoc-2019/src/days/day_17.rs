@@ -100,7 +100,7 @@ impl ChallengeInput {
                 **c == '#' && {
                     [(0, 1), (1, 0), (0, -1), (-1, 0)]
                         .into_iter()
-                        .map(|n| p.add(n.into()))
+                        .map(|n| p.add(n))
                         .filter_map(|n| self.map.get(&n))
                         .all(|c| *c == '#')
                 }

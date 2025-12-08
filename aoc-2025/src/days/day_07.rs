@@ -46,14 +46,14 @@ impl ChallengeInput {
         'line_loop: loop {
             let mut next_beams: HashSet<Point> = HashSet::with_capacity(beams.len() * 2);
             for beam in beams.iter() {
-                let beam = beam.add((0, 1).into());
+                let beam = beam.add((0, 1));
                 if beam.y == self.max_y {
                     break 'line_loop;
                 }
                 if self.splitters.contains(&beam) {
                     active_splitters.insert(beam);
-                    next_beams.insert(beam.add((1, 0).into()));
-                    next_beams.insert(beam.add((-1, 0).into()));
+                    next_beams.insert(beam.add((1, 0)));
+                    next_beams.insert(beam.add((-1, 0)));
                 } else {
                     next_beams.insert(beam);
                 }
@@ -68,7 +68,7 @@ impl ChallengeInput {
         self.time_line_traversal(self.start, &mut seen)
     }
     fn time_line_traversal(&self, beam: Point, seen: &mut HashMap<Point, u64>) -> u64 {
-        let beam = beam.add((0, 1).into());
+        let beam = beam.add((0, 1));
         if beam.y == self.max_y {
             return 1;
         }
@@ -77,8 +77,8 @@ impl ChallengeInput {
         }
         let mut time_lines = 0;
         if self.splitters.contains(&beam) {
-            time_lines += self.time_line_traversal(beam.add((1, 0).into()), seen)
-                + self.time_line_traversal(beam.add((-1, 0).into()), seen);
+            time_lines += self.time_line_traversal(beam.add((1, 0)), seen)
+                + self.time_line_traversal(beam.add((-1, 0)), seen);
         } else {
             time_lines += self.time_line_traversal(beam, seen);
         }
