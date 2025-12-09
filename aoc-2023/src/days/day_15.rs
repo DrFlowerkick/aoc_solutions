@@ -53,10 +53,10 @@ pub fn day_15() -> Result<()> {
             // remove lens from box, if it exists
             let label = instruction.split_once('-').unwrap().0.to_string();
             let key = AoCHash::from(label.as_str()).hash;
-            if let Some(lenses) = lens_label_box_cache.get_mut(&key) {
-                if let Some(index) = lenses.iter().position(|l| l.label == label) {
-                    lenses.remove(index);
-                }
+            if let Some(lenses) = lens_label_box_cache.get_mut(&key)
+                && let Some(index) = lenses.iter().position(|l| l.label == label)
+            {
+                lenses.remove(index);
             }
         } else if instruction.contains('=') {
             // add lens to box

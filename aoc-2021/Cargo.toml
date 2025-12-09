@@ -10,8 +10,8 @@ long-run-time = []
 all = ["short-run-time", "long-run-time"]
 
 [dependencies]
-anyhow = { workspace = true }
-my_lib = { workspace = true }
-fixedbitset = "0.5.7"
-petgraph = "0.8.2"
-serde = { version = "1.0", features = ["derive"] }
+anyhow.workspace = true
+fixedbitset.workspace = true
+my_lib.workspace = true
+petgraph.workspace = true
+serde.workspace = true

@@ -1,6 +1,6 @@
 //!day_10.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use my_lib::my_compass::Compass;
 use my_lib::my_map_point::MapPoint;
 use my_lib::my_map_two_dim::MyMap2D;
@@ -97,14 +97,14 @@ impl Pipe {
         let mut pipe = Pipe::default();
         let mut found_gates: usize = 0;
         for (op, o) in neighbors.iter().map(|(c, o)| (c.map(Pipe::from), o)) {
-            if let Some(neighbor_pipe) = op {
-                if neighbor_pipe.has_gate(o.flip())? {
-                    if found_gates == 2 {
-                        return Err(anyhow!("pipe only supports two gates"));
-                    }
-                    pipe.set(*o, PipeSegment::Pipe)?;
-                    found_gates += 1;
+            if let Some(neighbor_pipe) = op
+                && neighbor_pipe.has_gate(o.flip())?
+            {
+                if found_gates == 2 {
+                    return Err(anyhow!("pipe only supports two gates"));
                 }
+                pipe.set(*o, PipeSegment::Pipe)?;
+                found_gates += 1;
             }
         }
         if found_gates < 2 {
@@ -170,7 +170,7 @@ impl Pipe {
             _ => {
                 return Err(anyhow!(
                     "this internal error is not possible because of safety checks"
-                ))
+                ));
             }
         };
         self.set_pipe_side(initial_orientation, current_side);
@@ -429,7 +429,7 @@ impl<const X: usize, const Y: usize> TileMap<X, Y> {
                     _ => {
                         return Err(anyhow!(
                             "internal error, cannot happen because of filter in iter"
-                        ))
+                        ));
                     }
                 }
             }

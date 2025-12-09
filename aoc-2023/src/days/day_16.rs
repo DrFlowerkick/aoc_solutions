@@ -140,15 +140,15 @@ impl<const X: usize, const Y: usize> MirrorChamber<X, Y> {
     }
     fn beam_movement(&mut self, current_cell: MapPoint<X, Y>, beam_direction: Compass) {
         let (beam_1, beam_2) = self.map.get_mut(current_cell).beam_movement(beam_direction);
-        if let Some(beam_1_direction) = beam_1 {
-            if let Some(next_cell) = current_cell.neighbor(beam_1_direction) {
-                self.beam_movement(next_cell, beam_1_direction);
-            }
+        if let Some(beam_1_direction) = beam_1
+            && let Some(next_cell) = current_cell.neighbor(beam_1_direction)
+        {
+            self.beam_movement(next_cell, beam_1_direction);
         }
-        if let Some(beam_2_direction) = beam_2 {
-            if let Some(next_cell) = current_cell.neighbor(beam_2_direction) {
-                self.beam_movement(next_cell, beam_2_direction);
-            }
+        if let Some(beam_2_direction) = beam_2
+            && let Some(next_cell) = current_cell.neighbor(beam_2_direction)
+        {
+            self.beam_movement(next_cell, beam_2_direction);
         }
     }
     fn energized_cells(&self) -> usize {

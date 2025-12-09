@@ -12,7 +12,7 @@ long-run-time = []
 all = ["short-run-time", "long-run-time"]
 
 [dependencies]
-anyhow = { workspace = true }
-my_lib = { workspace = true }
-petgraph = "0.6.5"
-regex = "1.11.1"
+anyhow.workspace = true
+my_lib.workspace = true
+petgraph.workspace = true
+regex.workspace = true

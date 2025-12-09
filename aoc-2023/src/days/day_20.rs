@@ -1,6 +1,6 @@
 //!day_20.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use num::integer::lcm;
 use std::collections::{HashMap, VecDeque};
 
@@ -214,12 +214,12 @@ impl Server {
             // push button
             self.push_button();
             while let Some(mes) = self.recieve_message() {
-                if self.rx_input_cycles.contains_key(&mes.sender) && mes.pulse {
-                    if let Some(cycle) = self.rx_input_cycles.get_mut(&mes.sender) {
-                        if cycle.is_none() {
-                            *cycle = Some(counter);
-                        }
-                    }
+                if self.rx_input_cycles.contains_key(&mes.sender)
+                    && mes.pulse
+                    && let Some(cycle) = self.rx_input_cycles.get_mut(&mes.sender)
+                    && cycle.is_none()
+                {
+                    *cycle = Some(counter);
                 }
                 if mes.reciever == "broadcaster" {
                     for rec_label in self.get_recievers(&mes.reciever)?.iter() {
@@ -230,15 +230,15 @@ impl Server {
                         ));
                     }
                 }
-                if let Some(ff) = self.flip_flops.get_mut(&mes.reciever) {
-                    if let Some(pulse) = ff.recieve_pulse(mes.pulse) {
-                        for rec_label in self.get_recievers(&mes.reciever)?.iter() {
-                            self.send(Message::new_pulse(
-                                mes.reciever.to_owned(),
-                                rec_label.to_owned(),
-                                pulse,
-                            ));
-                        }
+                if let Some(ff) = self.flip_flops.get_mut(&mes.reciever)
+                    && let Some(pulse) = ff.recieve_pulse(mes.pulse)
+                {
+                    for rec_label in self.get_recievers(&mes.reciever)?.iter() {
+                        self.send(Message::new_pulse(
+                            mes.reciever.to_owned(),
+                            rec_label.to_owned(),
+                            pulse,
+                        ));
                     }
                 }
                 if let Some(con) = self.conjunctions.get_mut(&mes.reciever) {

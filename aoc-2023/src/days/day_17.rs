@@ -1,7 +1,9 @@
 //!day_17.rs
 
 use anyhow::Result;
+#[cfg(feature = "long-run-time")]
 use my_lib::my_compass::Compass;
+#[cfg(feature = "long-run-time")]
 use my_lib::my_map_point::MapPoint;
 
 #[cfg(feature = "long-run-time")]
@@ -20,6 +22,7 @@ const X: usize = 141;
 #[cfg(feature = "long-run-time")]
 const Y: usize = 141;
 
+#[cfg(feature = "long-run-time")]
 trait PathNode<const X: usize, const Y: usize>: Default + PartialEq + Eq + Copy + Clone {
     fn step_forward(&self) -> Option<Self>;
     fn step_left(&self) -> Option<Self>;
@@ -27,6 +30,7 @@ trait PathNode<const X: usize, const Y: usize>: Default + PartialEq + Eq + Copy 
     fn get_city_block(&self) -> MapPoint<X, Y>;
 }
 
+#[cfg(feature = "long-run-time")]
 #[derive(Default, PartialEq, Eq, Copy, Clone)]
 struct NormalCrucible<const X: usize, const Y: usize> {
     city_block: MapPoint<X, Y>,
@@ -34,6 +38,7 @@ struct NormalCrucible<const X: usize, const Y: usize> {
     n_steps: u8,
 }
 
+#[cfg(feature = "long-run-time")]
 impl<const X: usize, const Y: usize> PathNode<X, Y> for NormalCrucible<X, Y> {
     fn step_forward(&self) -> Option<Self> {
         if self.direction.is_center() || self.n_steps == 3 {
@@ -91,6 +96,7 @@ impl<const X: usize, const Y: usize> PathNode<X, Y> for NormalCrucible<X, Y> {
     }
 }
 
+#[cfg(feature = "long-run-time")]
 #[derive(Default, PartialEq, Eq, Copy, Clone)]
 struct UltraCrucible<const X: usize, const Y: usize> {
     city_block: MapPoint<X, Y>,
@@ -98,6 +104,7 @@ struct UltraCrucible<const X: usize, const Y: usize> {
     n_steps: u8,
 }
 
+#[cfg(feature = "long-run-time")]
 impl<const X: usize, const Y: usize> PathNode<X, Y> for UltraCrucible<X, Y> {
     fn step_forward(&self) -> Option<Self> {
         if self.direction.is_center() || self.n_steps == 10 {

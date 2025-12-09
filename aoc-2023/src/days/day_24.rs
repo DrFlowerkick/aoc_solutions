@@ -3,8 +3,7 @@
 use anyhow::{anyhow, Result};
 
 // for part 2 I use an equation solver
-use eqsolver::multivariable::MultiVarNewton;
-use nalgebra::{Matrix6, Vector6};
+use eqsolver::{multivariable::MultiVarNewton, nalgebra::{Matrix6, Vector6}};
 
 struct HailStone {
     x: f64,

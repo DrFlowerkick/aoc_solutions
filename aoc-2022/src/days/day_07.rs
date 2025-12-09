@@ -69,6 +69,7 @@ impl FileTree {
             } else if line.starts_with("$ cd ") {
                 let dir_name = line.split_once("$ cd ").unwrap().1.to_string();
                 current_dir = current_dir
+                    .clone()
                     .iter_children()
                     .find(|c| c.get_value().name == dir_name)
                     .unwrap();

@@ -37,12 +37,10 @@ impl<const X: usize, const Y: usize> Garden<X, Y> {
             },
         );
         let remainder = if count_even { 0 } else { 1 };
-        let garden_tiles = self
-            .map
+        self.map
             .iter_distance(start_point, filter_fn)
             .filter(|(.., d)| *d % 2 == remainder)
-            .count();
-        garden_tiles
+            .count()
     }
     fn count_steps_infinite_garden(&self, steps_to_take: usize) -> usize {
         // check S is in middle of
@@ -55,15 +53,19 @@ impl<const X: usize, const Y: usize> Garden<X, Y> {
         assert_eq!(start_point.x(), X / 2);
         assert_eq!(start_point.y(), Y / 2);
         // no rocks in center vertical or horizontal line, or at edge
-        assert!(!self
-            .map
-            .iter_column(start_point.x())
-            .any(|(_, v)| *v == '#'));
+        assert!(
+            !self
+                .map
+                .iter_column(start_point.x())
+                .any(|(_, v)| *v == '#')
+        );
         assert!(!self.map.iter_row(start_point.y()).any(|(_, v)| *v == '#'));
-        assert!(!self
-            .map
-            .iter_edge((0, 0).into(), false)
-            .any(|(_, v)| *v == '#'));
+        assert!(
+            !self
+                .map
+                .iter_edge((0, 0).into(), false)
+                .any(|(_, v)| *v == '#')
+        );
         // calc grid size
         let grid_cells_one_direction = steps_to_take / X;
         let grid_cells_remaining_steps = steps_to_take % X;

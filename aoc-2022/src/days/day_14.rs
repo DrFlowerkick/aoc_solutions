@@ -92,10 +92,10 @@ impl<'a> Iterator for FallingSand<'a> {
         let directions = [Point::new(0, 1), Point::new(-1, 1), Point::new(1, 1)];
         for direction in directions.iter() {
             let new_pos = direction.add(self.sand_unit);
-            if let Some(b) = self.bottom {
-                if new_pos.y == b {
-                    break;
-                }
+            if let Some(b) = self.bottom
+                && new_pos.y == b
+            {
+                break;
             }
             if self.rock_and_sand.sand.contains(&new_pos) {
                 continue;
