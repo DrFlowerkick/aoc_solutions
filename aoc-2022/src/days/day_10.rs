@@ -64,7 +64,7 @@ impl From<&str> for RegisterCommand {
                     return RegisterCommand {
                         cycle_time: 1,
                         delta_x: 0,
-                    }
+                    };
                 }
                 "addx" => {
                     if let Some(x) = split_value.next() {

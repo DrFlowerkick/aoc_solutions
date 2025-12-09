@@ -1,6 +1,6 @@
 //!day_14.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use my_lib::{my_compass::Compass, my_map_two_dim::MyMap2D};
 use std::{
     collections::HashMap,

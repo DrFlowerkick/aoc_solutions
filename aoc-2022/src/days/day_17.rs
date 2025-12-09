@@ -1,7 +1,7 @@
 //!day_17.rs
 
 use anyhow::Result;
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::{HashMap, hash_map::Entry};
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 struct Point {

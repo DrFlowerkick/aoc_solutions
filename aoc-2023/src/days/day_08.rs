@@ -14,11 +14,7 @@ impl Instructions {
         Self { left, right }
     }
     fn direction(&self, direction: bool) -> &String {
-        if direction {
-            &self.right
-        } else {
-            &self.left
-        }
+        if direction { &self.right } else { &self.left }
     }
 }
 

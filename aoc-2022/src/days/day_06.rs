@@ -77,13 +77,13 @@ mod tests {
             let mut check_start_of_paket_marker = true;
             let mut start_of_message_marker_state = MarkerState::default();
             for c in line.chars() {
-                if check_start_of_paket_marker {
-                    if let Some(marker_pos) = start_of_paket_marker_state.check_marker(c, 4) {
-                        let result_part1 = marker_pos;
-                        check_start_of_paket_marker = false;
-                        println!("result example {} day 06 part 1: {}", i + 1, result_part1);
-                        assert_eq!(result_part1, test_vector_1[i]);
-                    }
+                if check_start_of_paket_marker
+                    && let Some(marker_pos) = start_of_paket_marker_state.check_marker(c, 4)
+                {
+                    let result_part1 = marker_pos;
+                    check_start_of_paket_marker = false;
+                    println!("result example {} day 06 part 1: {}", i + 1, result_part1);
+                    assert_eq!(result_part1, test_vector_1[i]);
                 }
                 if let Some(marker_pos) = start_of_message_marker_state.check_marker(c, 14) {
                     let result_part2 = marker_pos;

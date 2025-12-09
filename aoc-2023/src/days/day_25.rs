@@ -1,10 +1,10 @@
 //!day_25.rs
 
-use anyhow::anyhow;
 use anyhow::Result as AnyResult;
+use anyhow::anyhow;
+use rustworkx_core::Result;
 use rustworkx_core::connectivity::stoer_wagner_min_cut;
 use rustworkx_core::petgraph::graph::{NodeIndex, UnGraph};
-use rustworkx_core::Result;
 
 struct WiringDiagramm<'a> {
     graph: UnGraph<&'a str, u32>,

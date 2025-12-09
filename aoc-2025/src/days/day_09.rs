@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use my_lib::my_geometry::{my_line::LineSegment, my_point::Point, my_rectangle::Rectangle};
-use std::collections::HashSet;
 
 struct ChallengeInput {
     tiles: Vec<Point>,
@@ -63,18 +62,6 @@ impl ChallengeInput {
         }
         max_x *= 10;
         max_y *= 10;
-        // collect same direction endpoints
-        let same_direction_endpoints: HashSet<Point> = self
-            .tiles
-            .iter()
-            .filter(|t| {
-                let tile_segments: Vec<LineSegment> =
-                    segments.iter().filter(|ts| ts == t).copied().collect();
-                assert_eq!(tile_segments.len(), 2);
-                tile_segments[0].is_parallel(&tile_segments[1])
-            })
-            .copied()
-            .collect();
         // check rectangles
         let mut max_rectangle_size = i64::MIN;
         for (i, tile_a) in self.tiles.iter().enumerate() {
@@ -99,41 +86,28 @@ impl ChallengeInput {
                         {
                             let to_the_right =
                                 LineSegment::new(neighbor, (max_x, neighbor.y).into());
-                            let mut same_direction_count = 0;
-                            let mut intersection_count = segments
+                            let intersection_count = segments
                                 .iter()
                                 .filter(|s| {
                                     if let Some(is) = s.segment_intersection(&to_the_right) {
-                                        if same_direction_endpoints.contains(&is) {
-                                            same_direction_count += 1;
-                                            true
-                                        } else {
-                                            !s.end_points().contains(&is)
-                                        }
+                                        !s.end_points().contains(&is)
                                     } else {
                                         false
                                     }
                                 })
                                 .count();
-                            // remove same direction double count
-                            intersection_count -= same_direction_count / 2;
+
                             if intersection_count.is_multiple_of(2) {
                                 if intersection_count > 0 {
                                     continue 'rectangle_loop;
                                 }
                                 let to_the_top =
                                     LineSegment::new(neighbor, (neighbor.x, max_y).into());
-                                let mut same_direction_count = 0;
                                 let intersection_count = segments
                                     .iter()
                                     .filter(|s| {
                                         if let Some(is) = s.segment_intersection(&to_the_top) {
-                                            if same_direction_endpoints.contains(&is) {
-                                                same_direction_count += 1;
-                                                true
-                                            } else {
-                                                !s.end_points().contains(&is)
-                                            }
+                                            !s.end_points().contains(&is)
                                         } else {
                                             false
                                         }

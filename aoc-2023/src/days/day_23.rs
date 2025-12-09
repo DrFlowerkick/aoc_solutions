@@ -99,13 +99,13 @@ impl<const X: usize, const Y: usize> Maze<X, Y> {
             _ => false,
         }
     } /*
-      fn next_possible_points(&self, point: &MapPoint<X, Y>) -> Vec<MapPoint<X, Y>> {
-          self.maze
-              .iter_neighbors(*point)
-              .filter(|(p, o, v)| **v != '.' && **v != '#' && self.is_possible(p, o))
-              .map(|(p, ..)| p)
-              .collect()
-      } */
+    fn next_possible_points(&self, point: &MapPoint<X, Y>) -> Vec<MapPoint<X, Y>> {
+    self.maze
+    .iter_neighbors(*point)
+    .filter(|(p, o, v)| **v != '.' && **v != '#' && self.is_possible(p, o))
+    .map(|(p, ..)| p)
+    .collect()
+    } */
     fn go_hiking(&self) -> usize {
         let mut cache: HashMap<
             (MapPoint<X, Y>, MapPoint<X, Y>),

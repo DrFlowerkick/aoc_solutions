@@ -1,6 +1,6 @@
 //!day_19.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 
 type RuleSet = HashMap<String, Vec<Rule>>;
@@ -244,7 +244,7 @@ impl MachinePart {
                 for rule in rules.iter() {
                     match rule.execute(self) {
                         RuleResult::Link(new_rule_key) => {
-                            return self.calc_machine_part_rating_recursive(new_rule_key, rule_set)
+                            return self.calc_machine_part_rating_recursive(new_rule_key, rule_set);
                         }
                         RuleResult::Next => (),
                         RuleResult::Value(value) => return Ok(value),

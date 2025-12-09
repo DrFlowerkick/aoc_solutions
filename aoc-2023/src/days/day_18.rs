@@ -1,6 +1,6 @@
 //!day_18.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 // https://www.youtube.com/watch?v=bGWK76_e-LM
 // https://de.wikipedia.org/wiki/Gau%C3%9Fsche_Trapezformel

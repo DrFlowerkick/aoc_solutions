@@ -1,6 +1,6 @@
 //!day_02.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 #[derive(Default)]
 struct Cubes {

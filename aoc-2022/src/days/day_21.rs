@@ -1,6 +1,6 @@
 //!day_21.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use evalexpr::eval_int;
 use std::collections::HashMap;
 

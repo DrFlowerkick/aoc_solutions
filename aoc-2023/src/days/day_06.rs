@@ -1,6 +1,6 @@
 //!day_06.rs
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 
 struct RaceParam {
     time: f64,
