@@ -19,6 +19,7 @@ eqsolver = "0.3.0"
 evalexpr = "13.1.0"
 fixedbitset = "0.5.7"
 futures = "0.3.31"
+good_lp = { version = "1.14.2", default-features = false, features = ["minilp"] }
 my_lib = { git = "https://github.com/DrFlowerkick/mylib", branch = "main" }
 nalgebra = "0.34.1"
 num = "0.4.1"

@@ -11,5 +11,6 @@ all = ["short-run-time", "long-run-time"]
 
 [dependencies]
 anyhow.workspace = true
+good_lp.workspace = true
 my_lib.workspace = true
 petgraph.workspace = true
