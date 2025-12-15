@@ -84,7 +84,7 @@ impl<'a> ChallengeInput<'a> {
             .map(|e| self.walk_tree(e.target(), end, seen))
             .sum();
 
-        seen.insert(node.into(), count);
+        seen.insert(node, count);
         count
     }
 }
