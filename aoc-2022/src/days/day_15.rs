@@ -1,7 +1,10 @@
 //!day_15.rs
 
 use anyhow::Result;
-use my_lib::my_geometry::{my_diamond::Diamond, my_line::Line, my_point::Point};
+use my_lib::{
+    my_geometry::{my_line::Line, my_point::Point},
+    my_pixels::my_diamond::Diamond,
+};
 
 #[derive(Debug, Clone, Copy)]
 struct SensorBeacon {

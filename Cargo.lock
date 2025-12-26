@@ -58,6 +58,7 @@ name = "aoc-2018"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "my_lib",
 ]
 
@@ -823,8 +824,8 @@ dependencies = [
 
 [[package]]
 name = "my_lib"
-version = "0.23.1"
-source = "git+https://github.com/DrFlowerkick/mylib?branch=main#2a4822eb3e5e29c9a05cd45f326fd7a6a9621694"
+version = "0.23.2"
+source = "git+https://github.com/DrFlowerkick/mylib?branch=main#9efbaf97523afcef7d819e2ee5e09a907d33df29"
 dependencies = [
  "anyhow",
  "chrono",

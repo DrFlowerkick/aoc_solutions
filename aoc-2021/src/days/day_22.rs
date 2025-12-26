@@ -1,7 +1,7 @@
 //!day_22.rs
 
 use anyhow::Result;
-use my_lib::my_geometry::{my_box::Box3D, my_point::Point3D};
+use my_lib::{my_geometry::my_point::Point3D, my_pixels::my_box::Box3D};
 use std::collections::VecDeque;
 
 #[derive(Debug, Clone, Copy)]

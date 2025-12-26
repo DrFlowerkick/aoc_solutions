@@ -11,4 +11,5 @@ all = ["short-run-time", "long-run-time"]
 
 [dependencies]
 anyhow.workspace = true
+chrono.workspace = true
 my_lib.workspace = true

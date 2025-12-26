@@ -1,8 +1,8 @@
 //!day_03.rs
 
 use anyhow::Result;
-use my_lib::my_geometry::{my_point::Point3D, my_box::Box3D};
-use std::collections::{VecDeque};
+use my_lib::{my_geometry::my_point::Point3D, my_pixels::my_box::Box3D};
+use std::collections::VecDeque;
 
 struct ChallengeInput {
     plans: Vec<Box3D>,
@@ -19,7 +19,11 @@ impl From<&str> for ChallengeInput {
                     let (x, y) = point.split_once(',').unwrap();
                     let point = Point3D::new(x.parse().unwrap(), y.parse().unwrap(), 0);
                     let (width, height) = size.split_once('x').unwrap();
-                    let delta = Point3D::new(width.parse::<i64>().unwrap() - 1, height.parse::<i64>().unwrap() - 1, 0);
+                    let delta = Point3D::new(
+                        width.parse::<i64>().unwrap() - 1,
+                        height.parse::<i64>().unwrap() - 1,
+                        0,
+                    );
                     Box3D::new(point, point.add(delta))
                 })
                 .collect(),
@@ -37,10 +41,11 @@ impl ChallengeInput {
                 }
             }
         }
-        dbg!(intersections.len());
         let mut unique_plans: Vec<Box3D> = Vec::with_capacity(intersections.len() * 2);
         while let Some(intersection) = intersections.pop_front() {
-            if let Some(plan_intersection) = unique_plans.iter().find_map(|p| p.intersect(intersection)) {
+            if let Some(plan_intersection) =
+                unique_plans.iter().find_map(|p| p.intersect(intersection))
+            {
                 for remaining in intersection.subtract(plan_intersection) {
                     intersections.push_back(remaining);
                 }
@@ -48,7 +53,6 @@ impl ChallengeInput {
             }
             unique_plans.push(intersection);
         }
-        dbg!(unique_plans.len());
         unique_plans.iter().filter_map(|p| p.size()).sum()
     }
     fn solution_part_2(&self) -> usize {
