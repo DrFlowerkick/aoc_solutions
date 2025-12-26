@@ -22,6 +22,7 @@ fixedbitset = "0.5.7"
 futures = "0.3.31"
 good_lp = { version = "1.14.2", default-features = false, features = ["minilp"] }
 my_lib = { git = "https://github.com/DrFlowerkick/mylib", branch = "main" }
+#my_lib = { path = "../mylib" }
 nalgebra = "0.34.1"
 num = "0.4.1"
 num-bigint = "0.4.6"
