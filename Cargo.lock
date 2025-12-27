@@ -60,6 +60,8 @@ dependencies = [
  "anyhow",
  "chrono",
  "my_lib",
+ "petgraph",
+ "regex",
 ]
 
 [[package]]

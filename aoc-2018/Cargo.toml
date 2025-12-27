@@ -13,3 +13,5 @@ all = ["short-run-time", "long-run-time"]
 anyhow.workspace = true
 chrono.workspace = true
 my_lib.workspace = true
+petgraph.workspace = true
+regex.workspace = true
