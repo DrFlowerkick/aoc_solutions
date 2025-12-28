@@ -37,16 +37,8 @@ impl ChallengeInput {
         max_expected_size: i64,
     ) -> String {
         assert!(max_expected_size <= 300);
-        // for size 1 inherit power from grid
-        for (cell, power) in grid.iter() {
-            square_grid.insert((*cell, 1), *power);
-        }
-        // calculate remaining sizes
-        for size in 2..=max_expected_size {
-            if size == 3 {
-                // we already calculated size 3 in part 1
-                continue;
-            }
+        // calculate remaining sizes starting with 4, since 3 has been calculated in part 1
+        for size in 4..=max_expected_size {
             self.find_best_square(size, &mut grid, &mut square_grid);
         }
         let ((max_power, size), _) = square_grid.iter().max_by_key(|(_, v)| **v).unwrap();
@@ -111,9 +103,10 @@ pub fn solution() -> Result<()> {
     println!("result day_11 part 1: {result_part1}");
     assert_eq!(result_part1, "33,34");
 
-    // For my puzzle input, max_expected_size of 16 is enough. Larger size increases calculation time.
-    // If 16 is too low for your riddle input, increase it.
-    let result_part2 = challenge.solution_part_2(grid, square_grid, 16);
+    // To find the solution start with a good guess for max_expected_size (conservative would be 300).
+    // I use the solution to my input, 14, to reduce run time of calculation to the minimum without
+    // changing the code.
+    let result_part2 = challenge.solution_part_2(grid, square_grid, 14);
     println!("result day_11 part 2: {result_part2}");
     assert_eq!(result_part2, "235,118,14");
 
@@ -150,7 +143,7 @@ mod tests {
             println!("result day_11 part 1: {result_part1}");
             assert_eq!(result_part1, solution_part_1);
 
-            let result_part2 = example.solution_part_2(grid, square_grid, 20);
+            let result_part2 = example.solution_part_2(grid, square_grid, 16);
             println!("result day_11 part 2: {result_part2}");
             assert_eq!(result_part2, solution_part_2);
         }

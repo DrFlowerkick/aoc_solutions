@@ -61,18 +61,14 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> u64 {
-        self.play_game(self.last_marble)
-    }
-    fn solution_part_2(&self) -> u64 {
-        self.play_game(self.last_marble * 100)
-    }
-    fn play_game(&self, last_marble: u64) -> u64 {
+    fn solution_part_1_and_2(&self, part_1_only: bool) -> (u64, u64) {
+        let mut part_1 = 0;
+        let factor = if part_1_only { 1 } else { 100 };
         let mut player: u64 = 0;
         let mut scores: HashMap<u64, u64> = HashMap::new();
         let mut value = 0;
         let mut marble = Marble::new(value);
-        while value < last_marble {
+        while value < self.last_marble * factor {
             value += 1;
             if value.is_multiple_of(23) {
                 for _ in 0..7 {
@@ -99,8 +95,12 @@ impl ChallengeInput {
             if player.is_multiple_of(self.players) {
                 player = 0;
             }
+            // part 1
+            if value == self.last_marble {
+                part_1 = *scores.values().max().unwrap();
+            }
         }
-        *scores.values().max().unwrap()
+        (part_1, *scores.values().max().unwrap())
     }
 }
 
@@ -108,11 +108,10 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2018/day_09.txt");
     let challenge = ChallengeInput::from(input);
 
-    let result_part1 = challenge.solution_part_1();
+    let (result_part1, result_part2) = challenge.solution_part_1_and_2(false);
     println!("result day_09 part 1: {result_part1}");
     assert_eq!(result_part1, 393_229);
 
-    let result_part2 = challenge.solution_part_2();
     println!("result day_09 part 2: {result_part2}");
     assert_eq!(result_part2, 3_273_405_195);
 
@@ -132,7 +131,7 @@ mod tests {
         for (line, solution) in input.lines().zip(solutions) {
             let example = ChallengeInput::from(line);
 
-            let result_part1 = example.solution_part_1();
+            let (result_part1, _) = example.solution_part_1_and_2(true);
             println!("result day_09 part 1: {result_part1}");
             assert_eq!(result_part1, solution);
         }

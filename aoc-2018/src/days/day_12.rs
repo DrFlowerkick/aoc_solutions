@@ -52,9 +52,10 @@ impl ChallengeInput {
         for g in 0..cycles {
             let min_c = *current_state.first().unwrap();
             /*
-            // To debug the pattern, print it. It will stabilize after some cycles.
+            // To debug the pattern, print it. After some cycles, it will reproduce itself
             // Afterward the pattern will shift with each generation to the left or right
-            // for a fix number: the difference between min current state and min new state.
+            // shifted to the left or right: the difference between min current state and
+            // min new state.
             let max = *current_state.last().unwrap();
             println!("gen: {g} -> min current_state: {min_c}");
             for i in min_c..=max {
@@ -73,6 +74,8 @@ impl ChallengeInput {
                 .zip(current_state.iter())
                 .all(|(n, c)| *n - min_n == *c - min_c)
             {
+                // The offset is the number of remaining cycles multiplied with the shift
+                // of first element in pattern.
                 offset = (cycles - g) * (min_n - min_c);
                 break;
             }
