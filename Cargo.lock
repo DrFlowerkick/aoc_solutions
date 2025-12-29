@@ -427,7 +427,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -826,8 +826,8 @@ dependencies = [
 
 [[package]]
 name = "my_lib"
-version = "0.24.1"
-source = "git+https://github.com/DrFlowerkick/mylib?branch=main#5b07fbdb15404a18880a5a6462f8aeaf998113f8"
+version = "0.24.2"
+source = "git+https://github.com/DrFlowerkick/mylib?branch=main#35a3b2f09ea09471e2e0f53298d575689707abf5"
 dependencies = [
  "anyhow",
  "chrono",
@@ -894,7 +894,7 @@ version = "0.50.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7957b9740744892f114936ab4a57b3f487491bbeafaf8083688b16841a4240e5"
 dependencies = [
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
