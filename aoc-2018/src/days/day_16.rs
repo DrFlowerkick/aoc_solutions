@@ -47,7 +47,7 @@ impl Sample {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
 enum Opcode {
     Addr,
     Addi,
@@ -198,76 +198,75 @@ impl ChallengeInput {
             .count()
     }
     fn solution_part_2(&self) -> usize {
-        let id_map = self.identify_opcode_id();
+        let id_map = self.identify_opcode_ids();
         let mut register = [0, 0, 0, 0];
         for (op_id, a, b, c) in self.instructions.iter() {
-            let oc_index = id_map.get(op_id).unwrap();
-            let oc = ALL_OPCODES[*oc_index];
-            register = oc.execute(*a, *b, *c, register);
+            register = id_map.get(op_id).unwrap().execute(*a, *b, *c, register);
         }
         register[0]
     }
-    fn identify_opcode_id(&self) -> HashMap<usize, usize> {
-        // Map: Opcode ID (Input) -> Possible Enum Indices (0..15)
-        let mut opcode_to_indices: HashMap<usize, HashSet<usize>> = HashMap::new();
-        // Map: Enum Index (0..15) -> Possible Opcode IDs (Input)
-        let mut index_to_opcodes: HashMap<usize, HashSet<usize>> = HashMap::new();
+    fn identify_opcode_ids(&self) -> HashMap<usize, Opcode> {
+        // Map: Opcode ID (Input) -> Possible Opcode Enums
+        let mut opcode_id_to_opcodes: HashMap<usize, HashSet<Opcode>> = HashMap::new();
+        // Map: Opcode Enum -> Possible Opcode IDs (Input)
+        let mut opcode_to_opcode_ids: HashMap<Opcode, HashSet<usize>> = HashMap::new();
 
         // analyze samples
         for sample in self.samples.iter() {
-            let matches: HashSet<usize> = ALL_OPCODES
+            let matches: HashSet<Opcode> = ALL_OPCODES
                 .into_iter()
-                .enumerate()
-                .filter(|(_, oc)| sample.try_opcode(oc))
-                .map(|(i, _)| i)
+                .filter(|oc| sample.try_opcode(oc))
                 .collect();
 
-            opcode_to_indices
+            opcode_id_to_opcodes
                 .entry(sample.instruction.0)
                 .and_modify(|set| {
-                    // only keep indices, which are in both hash sets
+                    // only keep opcodes, which are in both hash sets,
+                    // because valid opcodes must fit all samples with the same opcode id
                     *set = set.intersection(&matches).copied().collect();
                 })
                 .or_insert(matches);
         }
 
-        // "reverse" mapping of index to opcode
-        for i in 0..16 {
-            index_to_opcodes.insert(i, HashSet::new());
-            for (op_id, indices) in &opcode_to_indices {
-                if indices.contains(&i) {
-                    index_to_opcodes.entry(i).and_modify(|set| {
+        // "reverse" mapping of opcode to opcode id
+        for oc in ALL_OPCODES {
+            opcode_to_opcode_ids.insert(oc, HashSet::new());
+            for (op_id, indices) in &opcode_id_to_opcodes {
+                if indices.contains(&oc) {
+                    opcode_to_opcode_ids.entry(oc).and_modify(|set| {
                         set.insert(*op_id);
                     });
                 }
             }
         }
 
-        let mut id_map: HashMap<usize, usize> = HashMap::new();
-        while id_map.len() < 16 {
+        // reduce mappings by identifying single opcodes or opcode ids
+        let mut id_map: HashMap<usize, Opcode> = HashMap::new();
+        while id_map.len() < ALL_OPCODES.len() {
             let mut found = None;
-            if let Some((op_id, single_index)) =
-                opcode_to_indices.iter().find(|(_, set)| set.len() == 1)
+            if let Some((op_id, single_opcode)) =
+                opcode_id_to_opcodes.iter().find(|(_, set)| set.len() == 1)
             {
                 // found set with single index
-                let single_index = *single_index.iter().next().unwrap();
-                found = Some((*op_id, single_index));
+                let single_opcode = *single_opcode.iter().next().unwrap();
+                found = Some((*op_id, single_opcode));
             } else if let Some((index, single_op_id)) =
-                index_to_opcodes.iter().find(|(_, set)| set.len() == 1)
+                opcode_to_opcode_ids.iter().find(|(_, set)| set.len() == 1)
             {
                 // found set with single op_id
                 let single_op_id = *single_op_id.iter().next().unwrap();
                 found = Some((single_op_id, *index));
             }
 
-            if let Some((op_id, index)) = found.take() {
-                id_map.insert(op_id, index);
-                // remove index
-                opcode_to_indices.values_mut().for_each(|set| {
-                    set.remove(&index);
+            // found matching pair of opcode id and opcode
+            if let Some((op_id, opcode)) = found.take() {
+                id_map.insert(op_id, opcode);
+                // remove matched opcode from all entries
+                opcode_id_to_opcodes.values_mut().for_each(|set| {
+                    set.remove(&opcode);
                 });
-                // remove op_id
-                index_to_opcodes.values_mut().for_each(|set| {
+                // remove matched op_id from all entries
+                opcode_to_opcode_ids.values_mut().for_each(|set| {
                     set.remove(&op_id);
                 });
             } else {
