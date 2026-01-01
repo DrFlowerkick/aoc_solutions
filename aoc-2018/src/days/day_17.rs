@@ -15,6 +15,7 @@ enum Ground {
 
 #[derive(Debug)]
 struct ChallengeInput {
+    min_y: i64,
     max_y: i64,
     clay: HashSet<Point>,
     buckets: Vec<(Point, Point)>,
@@ -25,6 +26,7 @@ struct ChallengeInput {
 impl From<&str> for ChallengeInput {
     fn from(value: &str) -> Self {
         let mut clay = HashSet::new();
+        let mut min_y = i64::MAX;
         let mut max_y = i64::MIN;
         for line in value.lines() {
             let (left, right) = line.split_once(", ").unwrap();
@@ -39,11 +41,13 @@ impl From<&str> for ChallengeInput {
                 let y_start: i64 = y_start.parse().unwrap();
                 let y_end: i64 = y_end.parse().unwrap();
                 for y in y_start..=y_end {
+                    min_y = min_y.min(y);
                     max_y = max_y.max(y);
                     clay.insert(Point::new(x, y));
                 }
             } else {
                 let y: i64 = coordinate.strip_prefix("y=").unwrap().parse().unwrap();
+                min_y = min_y.min(y);
                 max_y = max_y.max(y);
                 let (x_start, x_end) = range.strip_prefix("x=").unwrap().split_once("..").unwrap();
                 let x_start: i64 = x_start.parse().unwrap();
@@ -54,6 +58,7 @@ impl From<&str> for ChallengeInput {
             }
         }
         ChallengeInput {
+            min_y,
             max_y,
             clay,
             buckets: Vec::new(),
@@ -64,90 +69,56 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&mut self) -> usize {
+    fn solution_part_1_and_2(&mut self) -> (usize, usize) {
         self.identify_buckets();
         let mut seen: HashSet<Point> = HashSet::new();
         let mut queue: VecDeque<Point> = VecDeque::new();
         // add point below spring to queue
-        queue.push_back(Point::new(500, 1));
-        let mut collected_water: Vec<Point> = Vec::new();
-        let mut remaining_water: Vec<Point> = Vec::new();
-        while !queue.is_empty() || !collected_water.is_empty() || !remaining_water.is_empty() {
-            // collect water
-            //dbg!("collect water");
-            while let Some(water) = queue.pop_front() {
-                if seen.contains(&water) {
-                    continue;
-                }
-                seen.insert(water);
-                collected_water.push(water);
-                // check if water flows down
-                let south = water.add(Compass::S);
-                if self.is_sand(&south) && !seen.contains(&south) {
-                    queue.push_back(south);
-                } else if self.is_flowing_out(&south) {
-                    continue;
-                } else {
-                    // check if water flows left or right
-                    let west = water.add(Compass::W);
-                    if self.is_sand(&west) && !seen.contains(&west) {
-                        queue.push_back(west);
-                    }
-                    let east = water.add(Compass::E);
-                    if self.is_sand(&east) && !seen.contains(&east) {
-                        queue.push_back(east);
-                    }
-                }
-            }
-            //dbg!(&collected_water);
-            // check if collected water is flowing out of bounds
-            //dbg!("check if collected water is flowing out of bounds");
-            while let Some(water) = collected_water.pop() {
-                if [Compass::S, Compass::W, Compass::E]
-                    .into_iter()
-                    .map(|c| water.add(c))
-                    .any(|pos| self.is_flowing_out(&pos))
-                {
-                    self.flowing_water.insert(water);
-                } else {
-                    // check if water flows left or right
-
-                    if [Compass::W, Compass::E]
+        queue.push_back(Point::new(500, self.min_y));
+        while let Some(water) = queue.pop_front() {
+            if seen.insert(water) {
+                if self.is_in_bucket(&water) {
+                    self.settled_water.insert(water);
+                    [Compass::S, Compass::W, Compass::E]
                         .into_iter()
                         .map(|c| water.add(c))
-                        .any(|pos| self.is_sand(&pos) && !seen.contains(&pos))
-                    {
-                        queue.push_back(water);
-                        // remove water from seen to recheck flowing of water
-                        seen.remove(&water);
-                        break;
-                    }
-                    remaining_water.push(water);
-                }
-            }
-            //dbg!(&remaining_water);
-            // check if remaining water is flowing out of bounds or settled
-            //dbg!("check if remaining water is flowing out of bounds or settled");
-            while let Some(water) = remaining_water.pop() {
-                if [Compass::W, Compass::E]
-                    .into_iter()
-                    .map(|c| water.add(c))
-                    .any(|pos| self.is_flowing_out(&pos))
-                {
-                    self.flowing_water.insert(water);
+                        .filter(|p| self.is_sand(p) && !seen.contains(p))
+                        .for_each(|p| queue.push_back(p));
                 } else {
-                    self.settled_water.insert(water);
+                    self.flowing_water.insert(water);
+                    // check if water flows out
+                    let south = water.add(Compass::S);
+                    if self.is_flowing_out(&south) {
+                        continue;
+                    }
+                    let check_sides = if self.is_sand(&south) {
+                        if !seen.contains(&south) {
+                            queue.push_back(south);
+                        }
+                        self.is_in_bucket(&south)
+                    } else {
+                        true
+                    };
+
+                    if check_sides {
+                        // check if water flows left or right
+                        let west = water.add(Compass::W);
+                        if self.is_sand(&west) && !seen.contains(&west) {
+                            queue.push_back(west);
+                        }
+                        let east = water.add(Compass::E);
+                        if self.is_sand(&east) && !seen.contains(&east) {
+                            queue.push_back(east);
+                        }
+                    }
                 }
             }
         }
-        self.debug_print(&queue, &collected_water, &remaining_water);
-        self.flowing_water.len() + self.settled_water.len()
-    }
-    fn solution_part_2(&self) -> u64 {
-        0
+        (seen.len(), self.settled_water.len())
     }
     fn identify_buckets(&mut self) {
         let mut seen: HashSet<Point> = HashSet::new();
+        let mut buckets: Vec<(Point, Point, Point)> = Vec::new();
         for clay in self.clay.iter() {
             if seen.insert(*clay) {
                 let mut bucket: HashSet<Point> = HashSet::new();
@@ -163,9 +134,10 @@ impl ChallengeInput {
                             .for_each(|p| queue.push_back(p));
                     }
                 }
-                // get bucket size
-                // min: top left with y pointing down
-                let start_bucket = *bucket.iter().min().unwrap();
+
+                // get bucket end points
+                let min_x = bucket.iter().map(|p| p.x).min().unwrap();
+                let start_bucket = *bucket.iter().filter(|p| p.x == min_x).min().unwrap();
                 let mut next = start_bucket;
                 // down
                 while bucket.contains(&next) {
@@ -184,11 +156,44 @@ impl ChallengeInput {
                 }
                 // end of bucket: correct one step too much up
                 let end_bucket = next.add(Compass::S);
-                let min_y = start_bucket.y.min(end_bucket.y);
-                let top_left = Point::new(start_bucket.x, min_y);
-                let bottom_right = Point::new(end_bucket.x, max_y);
-                self.buckets.push((top_left, bottom_right));
+                let bottom_left = Point::new(end_bucket.x, max_y);
+                buckets.push((start_bucket, end_bucket, bottom_left));
             }
+        }
+        // check for overlapping
+        for (index, bucket_a) in buckets.iter().enumerate() {
+            for bucket_b in buckets.iter().skip(index + 1) {
+                let (big, small) = if bucket_a.0.x < bucket_b.0.x && bucket_b.1.x < bucket_a.1.x {
+                    // b maybe in a
+                    (bucket_a, bucket_b)
+                } else if bucket_b.0.x < bucket_a.0.x && bucket_a.1.x < bucket_b.1.x {
+                    // a maybe in b
+                    (bucket_b, bucket_a)
+                } else {
+                    // no overlap
+                    continue;
+                };
+                // if small bottom does not stick into big bucket, there is no overlap
+                let big_min_y = big.0.y.min(big.1.y);
+                let small_min_y = small.0.y.min(small.1.y);
+                if small.2.y < big_min_y || small_min_y > big.2.y {
+                    // no overlap
+                    continue;
+                }
+                // if small is completely inside big, ignore it
+                if big_min_y < small_min_y {
+                    // small inside big
+                    continue;
+                }
+                // small and big overlap -> cerate to virtuell buckets
+                let left_bucket_bottom_right = Point::new(small.0.x, big.2.y);
+                self.buckets.push((big.0, left_bucket_bottom_right));
+                let right_bucket_top_left = Point::new(small.1.x, big.1.y);
+                self.buckets.push((right_bucket_top_left, big.2));
+            }
+            // add bucket_a to bucket list
+            let top_left = Point::new(bucket_a.0.x, bucket_a.0.y.max(bucket_a.1.y));
+            self.buckets.push((top_left, bucket_a.2));
         }
     }
     fn get_ground(&self, pos: &Point) -> Ground {
@@ -211,22 +216,16 @@ impl ChallengeInput {
         matches!(self.get_ground(pos), Ground::Oob | Ground::FlowingWater)
     }
     fn is_in_bucket(&self, pos: &Point) -> bool {
-        self.buckets.iter().any(|(tl, rb)| tl <= pos && pos <= rb)
+        self.buckets
+            .iter()
+            .any(|(tl, rb)| tl.x <= pos.x && pos.x <= rb.x && tl.y <= pos.y && pos.y <= rb.y)
     }
-    fn debug_print(
-        &self,
-        queue: &VecDeque<Point>,
-        collected_water: &Vec<Point>,
-        remaining_water: &Vec<Point>,
-    ) {
+    fn _debug_print(&self) {
         let min_x = self
             .clay
             .iter()
             .chain(self.flowing_water.iter())
             .chain(self.settled_water.iter())
-            .chain(queue.iter())
-            .chain(collected_water.iter())
-            .chain(remaining_water.iter())
             .map(|p| p.x)
             .min()
             .unwrap();
@@ -235,30 +234,26 @@ impl ChallengeInput {
             .iter()
             .chain(self.flowing_water.iter())
             .chain(self.settled_water.iter())
-            .chain(queue.iter())
-            .chain(collected_water.iter())
-            .chain(remaining_water.iter())
             .map(|p| p.x)
             .max()
             .unwrap();
         println!();
+
         for y in 0..=self.max_y {
+            //for y in (self.max_y/2)-5..=self.max_y {
+            //for y in 0..=self.max_y / 2 {
             for x in min_x..=max_x {
                 let pos = Point::new(x, y);
                 if pos == Point::new(500, 0) {
                     print!("+")
+                } else if self.buckets.iter().any(|(tl, br)| *tl == pos || *br == pos) {
+                    print!("B")
                 } else if self.clay.contains(&pos) {
                     print!("#");
                 } else if self.flowing_water.contains(&pos) {
                     print!("|");
                 } else if self.settled_water.contains(&pos) {
                     print!("~");
-                } else if queue.contains(&pos) {
-                    print!("q");
-                } else if collected_water.contains(&pos) {
-                    print!("c");
-                } else if remaining_water.contains(&pos) {
-                    print!("?");
                 } else {
                     print!(".");
                 }
@@ -272,13 +267,12 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2018/day_17.txt");
     let mut challenge = ChallengeInput::from(input);
 
-    let result_part1 = challenge.solution_part_1();
+    let (result_part1, result_part2) = challenge.solution_part_1_and_2();
     println!("result day_17 part 1: {result_part1}");
-    //assert_eq!(result_part1, XXX);
+    assert_eq!(result_part1, 27_206);
 
-    let result_part2 = challenge.solution_part_2();
     println!("result day_17 part 2: {result_part2}");
-    //assert_eq!(result_part2, YYY);
+    assert_eq!(result_part2, 21_787);
 
     Ok(())
 }
@@ -289,17 +283,32 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_buckets() {
+        let input = include_str!("../../../../aoc_input/aoc-2018/day_17_example.txt");
+        let mut example = ChallengeInput::from(input);
+
+        example.identify_buckets();
+        dbg!(&example.buckets);
+        example._debug_print();
+        let pos = Point::new(500, 2);
+        assert!(!example.is_in_bucket(&pos));
+
+        let pos = Point::new(500, 3);
+        assert!(example.is_in_bucket(&pos));
+    }
+
+    #[test]
     fn test_example_day_17() -> Result<()> {
         let input = include_str!("../../../../aoc_input/aoc-2018/day_17_example.txt");
         let mut example = ChallengeInput::from(input);
 
-        let result_part1 = example.solution_part_1();
+        let (result_part1, result_part2) = example.solution_part_1_and_2();
         println!("result day_17 part 1: {result_part1}");
         assert_eq!(result_part1, 57);
 
-        let result_part2 = example.solution_part_2();
         println!("result day_17 part 2: {result_part2}");
-        //assert_eq!(result_part2, YYY);
+        assert_eq!(result_part2, 29);
+        example._debug_print();
 
         Ok(())
     }
