@@ -4,14 +4,13 @@ use anyhow::Result;
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 
-type Register = [usize; 4];
 type Instruction = (usize, usize, usize, usize);
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Sample {
-    before: Register,
+    before: Vec<usize>,
     instruction: Instruction,
-    after: Register,
+    after: Vec<usize>,
 }
 
 impl From<&str> for Sample {
@@ -29,9 +28,9 @@ impl From<&str> for Sample {
             .map(|c| c.as_str().parse().unwrap())
             .collect();
         Sample {
-            before: [caps[0], caps[1], caps[2], caps[3]],
+            before: caps[0..=3].to_vec(),
             instruction: (caps[4], caps[5], caps[6], caps[7]),
-            after: [caps[8], caps[9], caps[10], caps[11]],
+            after: caps[8..=11].to_vec(),
         }
     }
 }
@@ -42,13 +41,13 @@ impl Sample {
             self.instruction.1,
             self.instruction.2,
             self.instruction.3,
-            self.before,
+            self.before.clone(),
         ) == self.after
     }
 }
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)]
-enum Opcode {
+pub enum Opcode {
     Addr,
     Addi,
     Mulr,
@@ -67,7 +66,7 @@ enum Opcode {
     Eqrr,
 }
 
-const ALL_OPCODES: [Opcode; 16] = [
+pub const ALL_OPCODES: [Opcode; 16] = [
     Opcode::Addr,
     Opcode::Addi,
     Opcode::Mulr,
@@ -86,8 +85,32 @@ const ALL_OPCODES: [Opcode; 16] = [
     Opcode::Eqrr,
 ];
 
+impl From<&str> for Opcode {
+    fn from(value: &str) -> Self {
+        match value {
+            "addr" => Opcode::Addr,
+            "addi" => Opcode::Addi,
+            "mulr" => Opcode::Mulr,
+            "muli" => Opcode::Muli,
+            "banr" => Opcode::Banr,
+            "bani" => Opcode::Bani,
+            "borr" => Opcode::Borr,
+            "bori" => Opcode::Bori,
+            "setr" => Opcode::Setr,
+            "seti" => Opcode::Seti,
+            "gtir" => Opcode::Gtir,
+            "gtri" => Opcode::Gtri,
+            "gtrr" => Opcode::Gtrr,
+            "eqir" => Opcode::Eqir,
+            "eqri" => Opcode::Eqri,
+            "eqrr" => Opcode::Eqrr,
+            _ => panic!("unknown opcode name"),
+        }
+    }
+}
+
 impl Opcode {
-    fn execute(&self, a: usize, b: usize, c: usize, mut reg: Register) -> Register {
+    pub fn execute(&self, a: usize, b: usize, c: usize, mut reg: Vec<usize>) -> Vec<usize> {
         match self {
             Opcode::Addr => {
                 reg[c] = reg[a] + reg[b];
@@ -199,7 +222,7 @@ impl ChallengeInput {
     }
     fn solution_part_2(&self) -> usize {
         let id_map = self.identify_opcode_ids();
-        let mut register = [0, 0, 0, 0];
+        let mut register = vec![0; 4];
         for (op_id, a, b, c) in self.instructions.iter() {
             register = id_map.get(op_id).unwrap().execute(*a, *b, *c, register);
         }

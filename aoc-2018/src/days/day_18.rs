@@ -22,19 +22,11 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&mut self) -> usize {
-        for _ in 0..10 {
-            self.one_round();
-        }
-        self.map.values().filter(|v| **v == '|').count()
-            * self.map.values().filter(|v| **v == '#').count()
-    }
-    fn solution_part_2(&mut self) -> usize {
+    fn solution_part_1_and_2(&mut self, max_rounds: usize) -> (usize, usize) {
         let mut pattern_round_cache: HashMap<String, usize> = HashMap::new();
         let mut values: Vec<usize> = Vec::new();
         // required to build pattern string
         let positions: Vec<Point> = self.map.keys().copied().collect();
-        let max_rounds = 1_000_000_000_usize;
         for round in 1..=max_rounds {
             self.one_round();
             let pattern: String = positions.iter().filter_map(|p| self.map.get(p)).collect();
@@ -46,11 +38,12 @@ impl ChallengeInput {
                 let remaining_rounds = (max_rounds - first_seen) % delta_round;
                 // -1 because values start at index 0, rounds start at 1
                 let value_index = first_seen + remaining_rounds - 1;
-                return values[value_index];
+                // part 1: 10 rounds
+                return (values[10 - 1], values[value_index]);
             }
         }
-        self.map.values().filter(|v| **v == '|').count()
-            * self.map.values().filter(|v| **v == '#').count()
+        (self.map.values().filter(|v| **v == '|').count()
+            * self.map.values().filter(|v| **v == '#').count(), 0)
     }
     fn one_round(&mut self) {
         let iter_map = self.map.clone();
@@ -97,14 +90,10 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2018/day_18.txt");
     let mut challenge = ChallengeInput::from(input);
 
-    let result_part1 = challenge.solution_part_1();
+    let (result_part1, result_part2) = challenge.solution_part_1_and_2(1_000_000_000);
     println!("result day_18 part 1: {result_part1}");
     assert_eq!(result_part1, 623_583);
 
-    // reset map
-    let input = include_str!("../../../../aoc_input/aoc-2018/day_18.txt");
-    let mut challenge = ChallengeInput::from(input);
-    let result_part2 = challenge.solution_part_2();
     println!("result day_18 part 2: {result_part2}");
     assert_eq!(result_part2, 107_912);
 
@@ -121,7 +110,7 @@ mod tests {
         let input = include_str!("../../../../aoc_input/aoc-2018/day_18_example.txt");
         let mut example = ChallengeInput::from(input);
 
-        let result_part1 = example.solution_part_1();
+        let (result_part1, _) = example.solution_part_1_and_2(10);
         println!("result day_18 part 1: {result_part1}");
         assert_eq!(result_part1, 1_147);
 
