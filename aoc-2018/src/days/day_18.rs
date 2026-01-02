@@ -42,8 +42,11 @@ impl ChallengeInput {
                 return (values[10 - 1], values[value_index]);
             }
         }
-        (self.map.values().filter(|v| **v == '|').count()
-            * self.map.values().filter(|v| **v == '#').count(), 0)
+        (
+            self.map.values().filter(|v| **v == '|').count()
+                * self.map.values().filter(|v| **v == '#').count(),
+            0,
+        )
     }
     fn one_round(&mut self) {
         let iter_map = self.map.clone();
