@@ -4,11 +4,12 @@ use crate::days::day_16::Opcode;
 use anyhow::Result;
 use std::collections::HashSet;
 
-struct Instruction {
-    oc: Opcode,
-    a: usize,
-    b: usize,
-    c: usize,
+#[derive(Debug, Clone, Copy)]
+pub struct Instruction {
+    pub oc: Opcode,
+    pub a: usize,
+    pub b: usize,
+    pub c: usize,
 }
 
 impl From<&str> for Instruction {
@@ -24,7 +25,7 @@ impl From<&str> for Instruction {
 }
 
 impl Instruction {
-    fn execute(&self, reg: Vec<usize>) -> Vec<usize> {
+    pub fn execute(&self, reg: Vec<usize>) -> Vec<usize> {
         self.oc.execute(self.a, self.b, self.c, reg)
     }
 }
