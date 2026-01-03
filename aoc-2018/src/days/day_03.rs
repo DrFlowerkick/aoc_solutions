@@ -32,7 +32,7 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> u64 {
+    fn solution_part_1(&self) -> i64 {
         let mut intersections: VecDeque<Box3D> = VecDeque::new();
         for (index, box_a) in self.plans.iter().enumerate() {
             for box_b in self.plans.iter().skip(index + 1) {

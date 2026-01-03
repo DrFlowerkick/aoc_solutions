@@ -106,13 +106,13 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> u64 {
+    fn solution_part_1(&self) -> i64 {
         self.boot_cubes(false)
     }
-    fn solution_part_2(&self) -> u64 {
+    fn solution_part_2(&self) -> i64 {
         self.boot_cubes(true)
     }
-    fn boot_cubes(&self, full: bool) -> u64 {
+    fn boot_cubes(&self, full: bool) -> i64 {
         let mut booted_cuboids: VecDeque<Cuboid> = VecDeque::new();
         for cuboid_instruction in self.cuboid_instructions.iter().filter(|c| !c.size || full) {
             // preparation
@@ -244,8 +244,8 @@ mod tests {
             .split_intersecting(example.cuboid_instructions[1].box3d)
             .unwrap();
         let size_intersection = intersection.size().unwrap();
-        let size_remaining_0: u64 = remaining_0.iter().filter_map(|b| b.size()).sum();
-        let size_remaining_1: u64 = remaining_1.iter().filter_map(|b| b.size()).sum();
+        let size_remaining_0: i64 = remaining_0.iter().filter_map(|b| b.size()).sum();
+        let size_remaining_1: i64 = remaining_1.iter().filter_map(|b| b.size()).sum();
         assert_eq!(size_intersection, 8);
         assert_eq!(size_remaining_0, 19);
         assert_eq!(size_remaining_1, 19);
@@ -264,7 +264,7 @@ mod tests {
                 remaining_on.push(on_cuboid);
             }
         }
-        let size_remaining_on: u64 = remaining_on.iter().filter_map(|b| b.size()).sum();
+        let size_remaining_on: i64 = remaining_on.iter().filter_map(|b| b.size()).sum();
         assert_eq!(size_remaining_on, 38);
 
         // check fourth instruction
@@ -275,7 +275,7 @@ mod tests {
         }
         remaining_on.push(ci4);
 
-        let size_remaining_on: u64 = remaining_on.iter().filter_map(|b| b.size()).sum();
+        let size_remaining_on: i64 = remaining_on.iter().filter_map(|b| b.size()).sum();
         assert_eq!(size_remaining_on, 39);
 
         let result_part1 = example.solution_part_1();
