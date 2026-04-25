@@ -257,49 +257,37 @@ impl App {
                 ActiveArea::CollectedItems => self.events.send(AppEvent::DropCollectedItem),
                 ActiveArea::Crawler => {}
             },
-            KeyCode::Home => {
-                if !self.room_crawler.active {
-                    self.active_area = self.active_area.left();
-                }
+            KeyCode::Home if !self.room_crawler.active => {
+                self.active_area = self.active_area.left();
             }
-            KeyCode::End => {
-                if !self.room_crawler.active {
-                    self.active_area = self.active_area.right();
-                }
+            KeyCode::End if !self.room_crawler.active => {
+                self.active_area = self.active_area.right();
             }
-            KeyCode::Char('i') => {
-                if !self.room_crawler.active {
-                    self.events.send(AppEvent::CheckInventory);
-                }
+            KeyCode::Char('i') if !self.room_crawler.active => {
+                self.events.send(AppEvent::CheckInventory);
             }
-            KeyCode::Enter => {
-                if let ActiveArea::Crawler = self.active_area {
-                    self.room_crawler.toggle_status(
-                        &mut self.events,
-                        &self.ship_room,
-                        &self.collected_items,
-                        &mut self.state_collected_items,
-                        self.sleepy_room_crawler,
-                    )
-                }
+            KeyCode::Enter if let ActiveArea::Crawler = self.active_area => {
+                self.room_crawler.toggle_status(
+                    &mut self.events,
+                    &self.ship_room,
+                    &self.collected_items,
+                    &mut self.state_collected_items,
+                    self.sleepy_room_crawler,
+                )
             }
-            KeyCode::PageUp => {
-                if let ActiveArea::Crawler = self.active_area {
-                    self.room_crawler.scroll = self.room_crawler.scroll.saturating_sub(1);
-                    self.room_crawler.scroll_state = self
-                        .room_crawler
-                        .scroll_state
-                        .position(self.room_crawler.scroll);
-                }
+            KeyCode::PageUp if let ActiveArea::Crawler = self.active_area => {
+                self.room_crawler.scroll = self.room_crawler.scroll.saturating_sub(1);
+                self.room_crawler.scroll_state = self
+                    .room_crawler
+                    .scroll_state
+                    .position(self.room_crawler.scroll);
             }
-            KeyCode::PageDown => {
-                if let ActiveArea::Crawler = self.active_area {
-                    self.room_crawler.scroll = self.room_crawler.scroll.saturating_add(1);
-                    self.room_crawler.scroll_state = self
-                        .room_crawler
-                        .scroll_state
-                        .position(self.room_crawler.scroll);
-                }
+            KeyCode::PageDown if let ActiveArea::Crawler = self.active_area => {
+                self.room_crawler.scroll = self.room_crawler.scroll.saturating_add(1);
+                self.room_crawler.scroll_state = self
+                    .room_crawler
+                    .scroll_state
+                    .position(self.room_crawler.scroll);
             }
             _ => {}
         }

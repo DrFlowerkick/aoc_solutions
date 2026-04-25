@@ -86,16 +86,12 @@ impl<const N: usize> Day12Data<N> {
             for (neighbor, orientation) in neighbors.iter().map(|n| (current_tile.neighbor(*n), n))
             {
                 match neighbor {
-                    Some(neighbor_tile) => {
-                        if self.garden.get(neighbor_tile) == region {
-                            if seen.insert(neighbor_tile) {
-                                visit.push_back(neighbor_tile);
-                            }
-                        } else {
-                            free_neighbors.insert(*orientation);
+                    Some(neighbor_tile) if self.garden.get(neighbor_tile) == region => {
+                        if seen.insert(neighbor_tile) {
+                            visit.push_back(neighbor_tile);
                         }
                     }
-                    None => {
+                    _ => {
                         free_neighbors.insert(*orientation);
                     }
                 }
