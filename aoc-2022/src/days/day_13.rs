@@ -15,17 +15,15 @@ impl From<&str> for Packet {
             let mut list: Vec<Packet> = Vec::new();
             let mut brackets_count = 1;
             let mut index: usize = 0;
-            let mut seperator_indices: Vec<usize> = Vec::new();
+            let mut separator_indices: Vec<usize> = Vec::new();
 
             while brackets_count > 0 {
                 index += 1;
                 match &value[index..index + 1] {
                     "[" => brackets_count += 1,
                     "]" => brackets_count -= 1,
-                    "," => {
-                        if brackets_count == 1 {
-                            seperator_indices.push(index);
-                        }
+                    "," if brackets_count == 1 => {
+                        separator_indices.push(index);
                     }
                     _ => (),
                 }
@@ -34,8 +32,8 @@ impl From<&str> for Packet {
             if index > 1 {
                 let mut prev_sep_i = 1;
                 // append index to include last respectivly single item
-                seperator_indices.push(index);
-                for sep_i in seperator_indices.into_iter() {
+                separator_indices.push(index);
+                for sep_i in separator_indices.into_iter() {
                     list.push(Packet::from(&value[prev_sep_i..sep_i]));
                     prev_sep_i = sep_i + 1;
                 }

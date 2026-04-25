@@ -32,11 +32,14 @@ impl ChallengeInput {
         self.words
             .iter()
             .filter(|l| {
-                let words_with_sorted_chars: HashSet<String> = l.iter().map(|w| {
-                    let mut sorted: Vec<char> = w.chars().collect();
-                    sorted.sort();
-                    sorted.into_iter().collect()
-                }).collect();
+                let words_with_sorted_chars: HashSet<String> = l
+                    .iter()
+                    .map(|w| {
+                        let mut sorted: Vec<char> = w.chars().collect();
+                        sorted.sort();
+                        sorted.into_iter().collect()
+                    })
+                    .collect();
                 l.len() == words_with_sorted_chars.len()
             })
             .count()
