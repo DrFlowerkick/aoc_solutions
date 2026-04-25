@@ -14,12 +14,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout solutions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: aoc_solutions/
 
       - name: Checkout private inputs
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: drflowerkick/aoc_input
           ref: main
@@ -40,12 +40,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout solutions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: aoc_solutions/
 
       - name: Checkout private inputs
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: drflowerkick/aoc_input
           ref: main
@@ -66,12 +66,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout solutions
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: aoc_solutions/
 
       - name: Checkout private inputs
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: drflowerkick/aoc_input
           ref: main
