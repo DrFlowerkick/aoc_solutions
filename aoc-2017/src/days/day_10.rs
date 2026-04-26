@@ -12,7 +12,7 @@ struct Ring {
 impl Ring {
     fn new(size: usize) -> Self {
         Ring {
-            ring: (0..size as u64).into_iter().collect(),
+            ring: (0..size as u64).collect(),
             current_pos: 0,
             skip_size: 0,
         }
@@ -37,10 +37,10 @@ impl Ring {
     fn knot_hash(&self) -> String {
         assert_eq!(self.ring.len(), 256);
         let mut dense_hash: Vec<u64> = vec![0; 16];
-        for i in 0..16_usize {
+        for (i, dh) in dense_hash.iter_mut().enumerate() {
             let pos = i * 16;
             let slice = &self.ring[pos..pos + 16];
-            dense_hash[i] = slice.iter().fold(0, |mut xor, v| {
+            *dh = slice.iter().fold(0, |mut xor, v| {
                 xor ^= v;
                 xor
             });
