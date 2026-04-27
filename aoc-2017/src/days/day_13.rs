@@ -3,10 +3,8 @@
 use anyhow::Result;
 use std::collections::HashMap;
 
-type Firewall = HashMap<u64, (Vec<bool>, bool)>;
-
 struct ChallengeInput {
-    firewall: Firewall,
+    firewall: HashMap<u64, u64>,
 }
 
 impl From<&str> for ChallengeInput {
@@ -16,9 +14,7 @@ impl From<&str> for ChallengeInput {
             let (depth, range) = line.split_once(": ").unwrap();
             let depth = depth.parse().unwrap();
             let range = range.parse().unwrap();
-            let mut layer = vec![false; range];
-            layer[0] = true;
-            firewall.insert(depth, (layer, false));
+            firewall.insert(depth, range);
         }
         ChallengeInput { firewall }
     }
@@ -26,72 +22,21 @@ impl From<&str> for ChallengeInput {
 
 impl ChallengeInput {
     fn solution_part_1(&self) -> u64 {
-        let mut my_depth = 0;
-        let max_depth = *self.firewall.keys().max().unwrap();
-        let mut severity = 0;
-        let mut firewall = self.firewall.clone();
-        while my_depth <= max_depth {
-            if let Some((layer, _)) = firewall.get(&my_depth)
-                && layer[0]
-            {
-                severity += my_depth * layer.len() as u64;
-            }
-            for (layer, dir) in firewall.values_mut() {
-                let scanner_pos = layer.iter().position(|l| *l).unwrap();
-                if *dir {
-                    // moving back
-                    layer.rotate_left(1);
-                    *dir = scanner_pos - 1 > 0;
-                } else {
-                    // moving forward
-                    layer.rotate_right(1);
-                    *dir = scanner_pos + 1 == layer.len() - 1;
-                }
-            }
-            my_depth += 1;
-        }
-        severity
+        self.firewall
+            .iter()
+            .filter(|(depth, range)| depth.is_multiple_of((**range - 1) * 2))
+            .map(|(depth, range)| depth * range)
+            .sum()
     }
     fn solution_part_2(&self) -> u64 {
-        let max_depth = *self.firewall.keys().max().unwrap();
-        let mut seen: HashMap<u64, Firewall> = HashMap::new();
-        seen.insert(0, self.firewall.clone());
-        'outer: for delay in 0..u64::MAX {
-            let mut tick = delay;
-            let mut my_depth = 0;
-            while my_depth <= max_depth {
-                // calc next firewall state
-                if !seen.contains_key(&(tick + 1)) {
-                    let mut firewall = seen.get(&tick).unwrap().clone();
-
-                    for (layer, dir) in firewall.values_mut() {
-                        let scanner_pos = layer.iter().position(|l| *l).unwrap();
-                        if *dir {
-                            // moving back
-                            layer.rotate_left(1);
-                            *dir = scanner_pos - 1 > 0;
-                        } else {
-                            // moving forward
-                            layer.rotate_right(1);
-                            *dir = scanner_pos + 1 == layer.len() - 1;
-                        }
-                    }
-
-                    seen.insert(tick + 1, firewall);
-                }
-
-                if let Some(firewall) = seen.get(&tick)
-                    && let Some((layer, _)) = firewall.get(&my_depth)
-                    && layer[0]
-                {
-                    // got caught
-                    continue 'outer;
-                } else {
-                    my_depth += 1;
-                }
-                tick += 1;
+        for delay in 0..u64::MAX {
+            if self
+                .firewall
+                .iter()
+                .all(|(depth, range)| !(delay + depth).is_multiple_of((range - 1) * 2))
+            {
+                return delay;
             }
-            return delay;
         }
         0
     }
