@@ -1,21 +1,30 @@
 //!day_10.rs
 
 use anyhow::Result;
-use std::fmt::Write;
 
-struct Ring {
+pub struct KnotHash {
     ring: Vec<u64>,
     current_pos: usize,
     skip_size: usize,
 }
 
-impl Ring {
-    fn new(size: usize) -> Self {
-        Ring {
-            ring: (0..size as u64).collect(),
+impl Default for KnotHash {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl KnotHash {
+    pub fn new() -> Self {
+        KnotHash {
+            ring: (0..256).collect(),
             current_pos: 0,
             skip_size: 0,
         }
+    }
+    fn strip_ring(&mut self, reduced_size: usize) {
+        // this is required for example 1, which uses a size of 5
+        self.ring.truncate(reduced_size);
     }
     fn tying_a_knot(&mut self, len: usize) {
         assert!(len <= self.ring.len());
@@ -34,21 +43,35 @@ impl Ring {
     fn check(&self) -> u64 {
         self.ring[0] * self.ring[1]
     }
-    fn knot_hash(&self) -> String {
+    pub fn knot_hash(mut self, input: impl Into<String>) -> u128 {
+        // consumes self, because ring buffer represents hash state
         assert_eq!(self.ring.len(), 256);
-        let mut dense_hash: Vec<u64> = vec![0; 16];
-        for (i, dh) in dense_hash.iter_mut().enumerate() {
+        // convert input to len vector
+        let input: String = input.into();
+        let mut lengths: Vec<usize> = input.chars().map(|c| c as usize).collect();
+        // append len suffix
+        lengths.append(&mut vec![17, 31, 73, 47, 23]);
+
+        // transform ring in 64 rounds
+        for _ in 0..64 {
+            for len in lengths.iter() {
+                self.tying_a_knot(*len);
+            }
+        }
+
+        // convert ring to dense hash
+        let mut knot_hash = 0_u128;
+        for i in 0..16 {
             let pos = i * 16;
             let slice = &self.ring[pos..pos + 16];
-            *dh = slice.iter().fold(0, |mut xor, v| {
-                xor ^= v;
+            let dense_bits = slice.iter().fold(0, |mut xor, v| {
+                xor ^= *v as u128;
                 xor
             });
+            knot_hash = knot_hash.rotate_left(8);
+            knot_hash += dense_bits;
         }
-        let mut knot_hash = String::new();
-        for dh in dense_hash {
-            write!(&mut knot_hash, "{:02x}", dh).unwrap();
-        }
+
         knot_hash
     }
 }
@@ -65,7 +88,8 @@ impl<'a> From<&'a str> for ChallengeInput<'a> {
 
 impl<'a> ChallengeInput<'a> {
     fn solution_part_1(&self, size: usize) -> u64 {
-        let mut ring = Ring::new(size);
+        let mut ring = KnotHash::new();
+        ring.strip_ring(size);
         let lengths = self.input_to_len();
         for len in lengths {
             ring.tying_a_knot(len);
@@ -79,21 +103,8 @@ impl<'a> ChallengeInput<'a> {
             .collect()
     }
     fn solution_part_2(&self) -> String {
-        let mut ring = Ring::new(256);
-        let lengths = self.input_as_ascii_to_len();
-        // 64 rounds
-        for _ in 0..64 {
-            for len in lengths.iter() {
-                ring.tying_a_knot(*len);
-            }
-        }
-        ring.knot_hash()
-    }
-    fn input_as_ascii_to_len(&self) -> Vec<usize> {
-        let mut len: Vec<usize> = self.input.chars().map(|c| c as usize).collect();
-        // append len suffix
-        len.append(&mut vec![17, 31, 73, 47, 23]);
-        len
+        let ring = KnotHash::new();
+        format!("{:032x}", ring.knot_hash(self.input))
     }
 }
 
