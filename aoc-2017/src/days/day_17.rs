@@ -55,35 +55,36 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1_and_2(&self) -> (u64, u64) {
+    fn solution_part_1(&self) -> u64 {
         let mut value = 0;
         let mut spin_lock = Spinlock::new(value);
-        let zero = spin_lock.clone();
         while value < 2017 {
             value += 1;
             spin_lock = spin_lock.n_next(self.steps);
             spin_lock = spin_lock.insert(value);
         }
-        let part_1 = spin_lock.next().value;
+        spin_lock.next().value
+    }
+    fn solution_part_2(&self) -> u64 {
+        let mut current_pos = 0;
+        let mut value_after_zero = 0;
 
-        // exit for example
-        if self.steps == 3 {
-            return (part_1, 0);
-        }
+        // Instead of Spinlock we use a mathematic solution. This is possible,
+        // because element of value 0 always stays at index 0 of list. Therefore
+        // we only have to check if a new value is added at pos 1.
+        for n in 1..=50_000_000 {
+            // each new value increases the length of list by 1.
+            // therefore we calculate the new pos by adding the steps to the current
+            // pos (using mod n to account for cycling of the end of the list) and
+            // than just add 1.
+            current_pos = (current_pos + self.steps).rem_euclid(n) + 1;
 
-        let mut after_zero = zero.next().value;
-        println!("after zero: {}", zero.next().value);
-
-        while value < 50_000_000 {
-            value += 1;
-            spin_lock = spin_lock.n_next(self.steps);
-            spin_lock = spin_lock.insert(value);
-            if after_zero != zero.next().value {
-                after_zero = zero.next().value;
-                println!("after zero: {}, value: {value}", zero.next().value);
+            // if current pos is equal to 1, we have a new value for the element after zero
+            if current_pos == 1 {
+                value_after_zero = n;
             }
         }
-        (part_1, zero.next().value)
+        value_after_zero
     }
 }
 
@@ -91,10 +92,11 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2017/day_17.txt");
     let challenge = ChallengeInput::from(input);
 
-    let (result_part1, result_part2) = challenge.solution_part_1_and_2();
+    let result_part1 = challenge.solution_part_1();
     println!("result day_17 part 1: {result_part1}");
     assert_eq!(result_part1, 1_311);
 
+    let result_part2 = challenge.solution_part_2();
     println!("result day_17 part 2: {result_part2}");
     assert_eq!(result_part2, 39_170_601);
 
@@ -111,7 +113,7 @@ mod tests {
         let input = include_str!("../../../../aoc_input/aoc-2017/day_17_example.txt");
         let example = ChallengeInput::from(input);
 
-        let (result_part1, _) = example.solution_part_1_and_2();
+        let result_part1 = example.solution_part_1();
         println!("result day_17 part 1: {result_part1}");
         assert_eq!(result_part1, 638);
 
