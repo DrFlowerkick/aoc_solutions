@@ -99,13 +99,12 @@ impl ChallengeInput {
                     }
                 }
             }
-            let num_p = particles.len();
-            particles = particles
-                .iter()
-                .filter(|p| !not_unique_pos.contains(&p.pos))
-                .copied()
-                .collect();
-            if num_p > particles.len() {
+            if !not_unique_pos.is_empty() {
+                particles = particles
+                    .iter()
+                    .filter(|p| !not_unique_pos.contains(&p.pos))
+                    .copied()
+                    .collect();
                 counter = 0;
             }
         }
