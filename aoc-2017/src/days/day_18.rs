@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::collections::{HashMap, VecDeque};
 
 #[derive(Clone, Copy)]
-enum Value {
+pub enum Value {
     Digit(i64),
     Char(char),
 }
@@ -21,13 +21,13 @@ impl From<&str> for Value {
 }
 
 impl Value {
-    fn value(&self, register: &Register) -> i64 {
+    pub fn value(&self, register: &Register) -> i64 {
         match self {
             Value::Char(reg) => *register.registers.get(reg).unwrap_or(&0),
             Value::Digit(digit) => *digit,
         }
     }
-    fn register(&self) -> char {
+    pub fn register(&self) -> char {
         let Value::Char(c) = *self else {
             panic!("expected char")
         };
@@ -36,46 +36,55 @@ impl Value {
 }
 
 #[derive(Clone)]
-struct Register {
-    registers: HashMap<char, i64>,
-    action_index: i64,
-    actions: Vec<Action>,
-    frequency: VecDeque<i64>,
-    recovered_frequency: VecDeque<i64>,
+pub struct Register {
+    pub registers: HashMap<char, i64>,
+    pub action_index: i64,
+    pub actions: Vec<Action>,
+    pub frequency: VecDeque<i64>,
+    pub recovered_frequency: VecDeque<i64>,
+    pub count_mul: u64,
 }
 
 impl Register {
-    fn new(actions: Vec<Action>) -> Self {
+    pub fn new(actions: Vec<Action>) -> Self {
         Self {
             registers: HashMap::new(),
             action_index: 0,
             actions,
             frequency: VecDeque::new(),
             recovered_frequency: VecDeque::new(),
+            count_mul: 0,
         }
     }
-    fn get_action(&self) -> Option<Action> {
+    pub fn get_action(&self) -> Option<Action> {
         if self.action_index >= 0 && (self.action_index as usize) < self.actions.len() {
             self.actions.get(self.action_index as usize).copied()
         } else {
             None
         }
     }
-    fn increment_index(&mut self) {
+    pub fn increment_index(&mut self) {
         self.action_index += 1;
     }
-    fn set_frequency(&mut self, val: i64) {
+    pub fn set_frequency(&mut self, val: i64) {
         self.frequency.push_back(val);
     }
-    fn set_recovered_frequency(&mut self, val: i64) {
+    pub fn set_recovered_frequency(&mut self, val: i64) {
         if val != 0
             && let Some(pop_val) = self.frequency.pop_back()
         {
             self.recovered_frequency.push_back(pop_val);
         }
     }
-    fn jump(&mut self, val: i64, jump: i64) {
+    pub fn jump_g(&mut self, val: i64, jump: i64) {
         if val > 0 {
+            self.action_index += jump;
+        } else {
+            self.action_index += 1;
+        }
+    }
+    pub fn jump_n(&mut self, val: i64, jump: i64) {
+        if val != 0 {
             self.action_index += jump;
         } else {
             self.action_index += 1;
@@ -84,14 +93,16 @@ impl Register {
 }
 
 #[derive(Clone, Copy)]
-enum Action {
+pub enum Action {
     Snd(Value),
     Set(Value, Value),
     Add(Value, Value),
+    Sub(Value, Value),
     Mul(Value, Value),
     Mod(Value, Value),
     Rcv(Value),
     Jgz(Value, Value),
+    Jnz(Value, Value),
 }
 
 impl From<&str> for Action {
@@ -101,17 +112,19 @@ impl From<&str> for Action {
             "snd" => Action::Snd(tokens.next().unwrap().into()),
             "set" => Action::Set(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             "add" => Action::Add(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
+            "sub" => Action::Sub(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             "mul" => Action::Mul(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             "mod" => Action::Mod(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             "rcv" => Action::Rcv(tokens.next().unwrap().into()),
             "jgz" => Action::Jgz(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
+            "jnz" => Action::Jnz(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             _ => panic!("unknown token"),
         }
     }
 }
 
 impl Action {
-    fn apply(&self, register: &mut Register) {
+    pub fn apply(&self, register: &mut Register) {
         match self {
             Action::Snd(reg) => {
                 let reg = reg.value(register);
@@ -134,9 +147,20 @@ impl Action {
                     .or_insert(val);
                 register.increment_index();
             }
+            Action::Sub(reg, val) => {
+                let reg = reg.register();
+                let val = val.value(register);
+                register
+                    .registers
+                    .entry(reg)
+                    .and_modify(|v| *v -= val)
+                    .or_insert(val);
+                register.increment_index();
+            }
             Action::Mul(reg, val) => {
                 let reg = reg.register();
                 let val = val.value(register);
+                register.count_mul += 1;
                 register.registers.entry(reg).and_modify(|v| *v *= val);
                 register.increment_index();
             }
@@ -154,13 +178,22 @@ impl Action {
             Action::Jgz(reg, jump) => {
                 let val = reg.value(register);
                 let jump = jump.value(register);
-                register.jump(val, jump);
+                register.jump_g(val, jump);
+            }
+            Action::Jnz(reg, jump) => {
+                let val = reg.value(register);
+                let jump = jump.value(register);
+                register.jump_n(val, jump);
             }
         }
     }
-    fn extract_2nd_digit(&self) -> Option<i64> {
+    pub fn extract_2nd_digit(&self) -> Option<i64> {
         let value = match self {
-            Action::Add(_, v) | Action::Mod(_, v) | Action::Mul(_, v) | Action::Set(_, v) => v,
+            Action::Add(_, v)
+            | Action::Sub(_, v)
+            | Action::Mod(_, v)
+            | Action::Mul(_, v)
+            | Action::Set(_, v) => v,
             _ => return None,
         };
         if let Value::Digit(value) = value {
@@ -171,8 +204,8 @@ impl Action {
     }
 }
 
-struct ChallengeInput {
-    actions: Vec<Action>,
+pub struct ChallengeInput {
+    pub actions: Vec<Action>,
 }
 
 impl From<&str> for ChallengeInput {
@@ -184,7 +217,7 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> i64 {
+    fn solution_part_1_day_18(&self) -> i64 {
         let mut register = Register::new(self.actions.clone());
         while let Some(action) = register.get_action() {
             action.apply(&mut register);
@@ -194,7 +227,7 @@ impl ChallengeInput {
         }
         0
     }
-    fn solution_part_2(&self) -> usize {
+    fn solution_part_2_day_18(&self) -> usize {
         // Note: this solution results from re-engineering the register code sequences
         // my notes for this a private, because they contain may puzzle input, but
         // I think you can guess, what the register code sequence does by reading my rust code.
@@ -224,12 +257,12 @@ impl ChallengeInput {
         }
         counter * values.len()
     }
-    fn extract_digit_from_action(&self, index: usize) -> Option<i64> {
+    pub fn extract_digit_from_action(&self, index: usize) -> Option<i64> {
         self.actions.get(index).and_then(|a| a.extract_2nd_digit())
     }
     fn generate_values_to_sort(&self) -> Vec<i64> {
         let a: i64 = 2_i64.pow(31) - 1;
-        // reading variables from puzzle input instead oh hard coding them here
+        // reading variables from puzzle input instead of hard coding them here
         let mut p = self.extract_digit_from_action(9).expect("unexpected value");
         let factor_1 = self
             .extract_digit_from_action(10)
@@ -257,11 +290,11 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2017/day_18.txt");
     let challenge = ChallengeInput::from(input);
 
-    let result_part1 = challenge.solution_part_1();
+    let result_part1 = challenge.solution_part_1_day_18();
     println!("result day_18 part 1: {result_part1}");
     assert_eq!(result_part1, 4_601);
 
-    let result_part2 = challenge.solution_part_2();
+    let result_part2 = challenge.solution_part_2_day_18();
     println!("result day_18 part 2: {result_part2}");
     assert_eq!(result_part2, 6_858);
 
@@ -278,7 +311,7 @@ mod tests {
         let input = include_str!("../../../../aoc_input/aoc-2017/day_18_example.txt");
         let example = ChallengeInput::from(input);
 
-        let result_part1 = example.solution_part_1();
+        let result_part1 = example.solution_part_1_day_18();
         println!("result day_18 part 1: {result_part1}");
         assert_eq!(result_part1, 4);
 
