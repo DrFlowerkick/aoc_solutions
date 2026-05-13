@@ -6,6 +6,7 @@ use anyhow::Result;
 
 pub fn run() -> Result<()> {
     days::day_01::solution()?;
+    days::day_02::solution()?;
 
     Ok(())
 }
