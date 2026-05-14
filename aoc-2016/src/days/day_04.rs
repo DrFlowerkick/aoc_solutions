@@ -94,8 +94,10 @@ impl ChallengeInput {
     }
     fn solution_part_2(&self) -> u64 {
         for room in self.rooms.iter() {
-            if let Some(id) = room.get_id_of_real() && room.decrypt().contains("north") {
-                return id
+            if let Some(id) = room.get_id_of_real()
+                && room.decrypt().contains("north")
+            {
+                return id;
             }
         }
         0

@@ -18,7 +18,7 @@ impl From<&str> for ChallengeInput {
 impl ChallengeInput {
     fn solution_part_1_and_2(&self) -> (String, String) {
         let mut part_1 = String::new();
-        let mut part_2 = [' '; 8];
+        let mut part_2 = [None::<char>; 8];
         let mut part_2_count = 0;
         let chunk_size = 500_000;
         let mut start = 0u64;
@@ -44,16 +44,16 @@ impl ChallengeInput {
                 }
                 if let Some(digit) = c6.to_digit(10)
                     && digit < 8
-                    && part_2[digit as usize] == ' '
+                    && part_2[digit as usize].is_none()
                 {
                     part_2_count += 1;
-                    part_2[digit as usize] = hit.chars().nth(6).unwrap();
+                    part_2[digit as usize] = hit.chars().nth(6);
                 }
             }
 
             start += chunk_size;
         }
-        (part_1, part_2.iter().copied().collect())
+        (part_1, part_2.iter().filter_map(|c| *c).collect())
     }
 }
 
