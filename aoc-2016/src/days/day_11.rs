@@ -1,15 +1,30 @@
 //!day_11.rs
 
 use anyhow::Result;
+use petgraph::{
+    Direction,
+    graph::{DiGraph, NodeIndex},
+    visit::EdgeRef,
+};
 use std::{
     cmp::Ordering,
     collections::{BTreeSet, HashMap},
+    fmt::Display,
 };
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 enum Item<'a> {
     Generator(&'a str),
     Microchip(&'a str),
+}
+
+impl<'a> Display for Item<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Item::Generator(ge) => write!(f, "Gen: {ge}"),
+            Item::Microchip(mc) => write!(f, "Mic: {mc}"),
+        }
+    }
 }
 
 impl<'a> From<&'a str> for Item<'a> {
@@ -55,6 +70,19 @@ impl<'a> Item<'a> {
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 struct Floor<'a> {
     items: Vec<Item<'a>>,
+}
+
+impl<'a> Display for Floor<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, item) in self.items.iter().enumerate() {
+            if i == 0 {
+                write!(f, "{item}")?;
+            } else {
+                write!(f, ", {item}")?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<'a> From<&'a str> for Floor<'a> {
@@ -185,6 +213,15 @@ struct ChallengeInput<'a> {
     pos: usize,
 }
 
+impl<'a> Display for ChallengeInput<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (i, floor) in self.floors.iter().enumerate() {
+            writeln!(f, "{}: {floor}", i + 1)?;
+        }
+        write!(f, "elevator floor: {}", self.pos + 1)
+    }
+}
+
 impl<'a> From<&'a str> for ChallengeInput<'a> {
     fn from(value: &'a str) -> Self {
         let mut floor_iter = value.lines().map(Floor::from);
@@ -226,13 +263,16 @@ impl<'a> ChallengeInput<'a> {
             .map(|(i, f)| (i + 1) * f.items.len())
             .sum()
     }
-    fn solution_part_1(&self) -> i64 {
+    fn solution_part_1(&self, print_steps: bool) -> i64 {
         let mut seen: HashMap<NormalizedFloors, i64> = HashMap::new();
-        let mut sorted_queue: BTreeSet<(ChallengeInput, i64)> = BTreeSet::new();
-        sorted_queue.insert((self.clone(), 0));
         let mut min_steps = i64::MAX;
+        let mut graph: DiGraph<(Floor, bool), ()> = DiGraph::new();
+        let root_id = graph.add_node((Floor { items: vec![] }, false));
+        let mut best_leave = root_id;
+        let mut sorted_queue: BTreeSet<(ChallengeInput, i64, NodeIndex)> = BTreeSet::new();
+        sorted_queue.insert((self.clone(), 0, root_id));
         // we use negative steps, because in case of identical heuristic value we want to continue with least steps
-        while let Some((state, step)) = sorted_queue.pop_last() {
+        while let Some((state, step, node)) = sorted_queue.pop_last() {
             // skip to many steps
             if -step >= min_steps {
                 continue;
@@ -255,6 +295,9 @@ impl<'a> ChallengeInput<'a> {
                 && state.floors[1].is_empty()
                 && state.floors[2].is_empty()
             {
+                if -step < min_steps {
+                    best_leave = node;
+                }
                 min_steps = min_steps.min(-step);
             }
             // move items
@@ -271,7 +314,9 @@ impl<'a> ChallengeInput<'a> {
                     let mut down = enter_elevator.clone();
                     down.pos -= 1;
                     if down.floors[down.pos].push_elevator(&elevator) {
-                        sorted_queue.insert((down, step - 1));
+                        let down_node = graph.add_node((elevator.clone(), false));
+                        graph.add_edge(node, down_node, ());
+                        sorted_queue.insert((down, step - 1, down_node));
                     }
                 }
                 if state.pos < 3 {
@@ -279,11 +324,48 @@ impl<'a> ChallengeInput<'a> {
                     let mut up = enter_elevator.clone();
                     up.pos += 1;
                     if up.floors[up.pos].push_elevator(&elevator) {
-                        sorted_queue.insert((up, step - 1));
+                        let up_node = graph.add_node((elevator, true));
+                        graph.add_edge(node, up_node, ());
+                        sorted_queue.insert((up, step - 1, up_node));
                     }
                 }
             }
         }
+
+        // print steps
+        if print_steps {
+            let mut steps: Vec<(Floor, bool)> = Vec::new();
+            let mut current = best_leave;
+            let mut state = self.clone();
+            while current != root_id {
+                let current_value = graph[current].clone();
+                steps.push(current_value);
+                current = graph
+                    .edges_directed(current, Direction::Incoming)
+                    .map(|e| e.source())
+                    .next()
+                    .unwrap();
+            }
+            println!("Initial state:\n{}", state);
+            for (i, (elevator, direction)) in steps.into_iter().rev().enumerate() {
+                println!(
+                    "Step {}, Moving {}:\n{}",
+                    i + 1,
+                    if direction { "up" } else { "down" },
+                    elevator
+                );
+                // apply step
+                assert!(state.floors[state.pos].pop_elevator(&elevator));
+                if direction {
+                    state.pos += 1;
+                } else {
+                    state.pos -= 1;
+                }
+                assert!(state.floors[state.pos].push_elevator(&elevator));
+                println!("current state:\n{}", state);
+            }
+        }
+
         min_steps
     }
     fn solution_part_2(&mut self) -> i64 {
@@ -291,7 +373,7 @@ impl<'a> ChallengeInput<'a> {
         self.floors[0].items.push(Item::Microchip("elerium"));
         self.floors[0].items.push(Item::Generator("dilithium"));
         self.floors[0].items.push(Item::Microchip("dilithium"));
-        self.solution_part_1()
+        self.solution_part_1(false)
     }
 }
 
@@ -299,7 +381,7 @@ pub fn solution() -> Result<()> {
     let input = include_str!("../../../../aoc_input/aoc-2016/day_11.txt");
     let challenge = ChallengeInput::from(input);
 
-    let result_part1 = challenge.solution_part_1();
+    let result_part1 = challenge.solution_part_1(false);
     println!("result day_11 part 1: {result_part1}");
     assert_eq!(result_part1, 33);
 
@@ -321,7 +403,7 @@ mod tests {
         let input = include_str!("../../../../aoc_input/aoc-2016/day_11_example.txt");
         let example = ChallengeInput::from(input);
 
-        let result_part1 = example.solution_part_1();
+        let result_part1 = example.solution_part_1(true);
         println!("result day_11 part 1: {result_part1}");
         assert_eq!(result_part1, 11);
 
