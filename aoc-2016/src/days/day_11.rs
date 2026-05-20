@@ -1,9 +1,12 @@
 //!day_11.rs
 
 use anyhow::Result;
-use std::collections::{HashSet, VecDeque};
+use std::{
+    cmp::Ordering,
+    collections::{BTreeSet, HashMap},
+};
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 enum Item<'a> {
     Generator(&'a str),
     Microchip(&'a str),
@@ -39,23 +42,31 @@ impl<'a> Item<'a> {
             false
         }
     }
+    fn is_pair(&self, other: &Item) -> bool {
+        match (self, other) {
+            (Item::Generator(g), Item::Microchip(m)) | (Item::Microchip(m), Item::Generator(g)) => {
+                g == m
+            }
+            _ => false,
+        }
+    }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 struct Floor<'a> {
     items: Vec<Item<'a>>,
 }
 
 impl<'a> From<&'a str> for Floor<'a> {
     fn from(value: &'a str) -> Self {
-        Floor {
-            items: value
-                .split(" a ")
-                .skip(1)
-                .flat_map(|w| w.split_whitespace().next())
-                .map(Item::from)
-                .collect(),
-        }
+        let mut items: Vec<Item<'a>> = value
+            .split(" a ")
+            .skip(1)
+            .flat_map(|w| w.split_whitespace().next())
+            .map(Item::from)
+            .collect();
+        items.sort();
+        Floor { items }
     }
 }
 
@@ -104,7 +115,77 @@ impl<'a> Floor<'a> {
     }
     fn push_elevator(&mut self, elevator: &Floor<'a>) -> bool {
         self.items.extend_from_slice(&elevator.items);
+        self.items.sort();
         self.is_valid()
+    }
+    fn count_pairs(&self) -> usize {
+        let mut count = 0;
+        for (i, item_a) in self.items.iter().enumerate() {
+            for item_b in self.items.iter().skip(i + 1) {
+                if item_a.is_pair(item_b) {
+                    count += 1;
+                }
+            }
+        }
+        count
+    }
+    fn count_generators(&self) -> usize {
+        self.items
+            .iter()
+            .filter(|i| matches!(i, Item::Generator(_)))
+            .filter(|g| self.items.iter().all(|i| !i.is_pair(g)))
+            .count()
+    }
+    fn count_microchips(&self) -> usize {
+        self.items
+            .iter()
+            .filter(|i| matches!(i, Item::Microchip(_)))
+            .filter(|m| self.items.iter().all(|i| !i.is_pair(m)))
+            .count()
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
+struct NormalizedFloors {
+    pairs: Vec<usize>,
+    solo_generators: Vec<usize>,
+    solo_microchips: Vec<usize>,
+    pos: usize,
+}
+
+impl<'a> From<&ChallengeInput<'a>> for NormalizedFloors {
+    fn from(value: &ChallengeInput) -> Self {
+        let mut pairs: Vec<usize> = value
+            .floors
+            .iter()
+            .map(|floor| floor.count_pairs())
+            .enumerate()
+            .flat_map(|(i, c)| vec![i; c])
+            .collect();
+        let mut solo_generators: Vec<usize> = value
+            .floors
+            .iter()
+            .map(|floor| floor.count_generators())
+            .enumerate()
+            .flat_map(|(i, c)| vec![i; c])
+            .collect();
+        let mut solo_microchips: Vec<usize> = value
+            .floors
+            .iter()
+            .map(|floor| floor.count_microchips())
+            .enumerate()
+            .flat_map(|(i, c)| vec![i; c])
+            .collect();
+        pairs.sort();
+        solo_generators.sort();
+        solo_microchips.sort();
+
+        NormalizedFloors {
+            pairs,
+            solo_generators,
+            solo_microchips,
+            pos: value.pos,
+        }
     }
 }
 
@@ -129,52 +210,98 @@ impl<'a> From<&'a str> for ChallengeInput<'a> {
     }
 }
 
-impl<'a> ChallengeInput<'a> {
-    fn solution_part_1(&self) -> u64 {
-        let mut seen: HashSet<ChallengeInput> = HashSet::new();
-        let mut queue: VecDeque<(ChallengeInput, u64)> = VecDeque::new();
-        queue.push_back((self.clone(), 0));
-        while let Some((state, step)) = queue.pop_front() {
-            if seen.insert(state.clone()) {
-                // check for final state
-                if state.floors[0].is_empty()
-                    && state.floors[1].is_empty()
-                    && state.floors[2].is_empty()
-                {
-                    return step;
-                }
-                // move items
-                for elevator in state.floors[state.pos].possible_elevators() {
-                    // check if remaining items are valid
-                    let mut enter_elevator = state.clone();
-                    if !enter_elevator.floors[enter_elevator.pos].pop_elevator(&elevator) {
-                        // invalid remaining items, skip elevator
-                        continue;
-                    }
+impl<'a> Ord for ChallengeInput<'a> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match self.heuristic().cmp(&other.heuristic()) {
+            Ordering::Equal => match self.floors.cmp(&other.floors) {
+                Ordering::Equal => self.pos.cmp(&other.pos),
+                cmp => cmp,
+            },
+            cmp => cmp,
+        }
+    }
+}
 
-                    if state.pos > 0 {
-                        // move one down
-                        let mut down = enter_elevator.clone();
-                        down.pos -= 1;
-                        if down.floors[down.pos].push_elevator(&elevator) && !seen.contains(&down) {
-                            queue.push_back((down, step + 1));
-                        }
+impl<'a> PartialOrd for ChallengeInput<'a> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl<'a> ChallengeInput<'a> {
+    fn heuristic(&self) -> usize {
+        self.floors
+            .iter()
+            .enumerate()
+            .map(|(i, f)| (i + 1) * f.items.len())
+            .sum()
+    }
+    fn solution_part_1(&self) -> i64 {
+        let mut seen: HashMap<NormalizedFloors, i64> = HashMap::new();
+        let mut sorted_queue: BTreeSet<(ChallengeInput, i64)> = BTreeSet::new();
+        sorted_queue.insert((self.clone(), 0));
+        let mut min_steps = i64::MAX;
+        // we use negative steps, because in case of identical heuristic value we want to continue with least steps
+        while let Some((state, step)) = sorted_queue.pop_last() {
+            // skip to many steps
+            if -step >= min_steps {
+                continue;
+            }
+
+            // check if state already existed
+            let normalize = NormalizedFloors::from(&state);
+            if let Some(seen_steps) = seen.get(&normalize)
+                && -step >= *seen_steps
+            {
+                // this state already happened with less steps
+                continue;
+            }
+            // insert normalized state into seen cache
+            seen.insert(normalize, -step);
+
+            // check for final state
+            if state.pos == 3
+                && state.floors[0].is_empty()
+                && state.floors[1].is_empty()
+                && state.floors[2].is_empty()
+            {
+                min_steps = min_steps.min(-step);
+            }
+            // move items
+            for elevator in state.floors[state.pos].possible_elevators() {
+                // check if remaining items are valid
+                let mut enter_elevator = state.clone();
+                if !enter_elevator.floors[enter_elevator.pos].pop_elevator(&elevator) {
+                    // invalid remaining items, skip elevator
+                    continue;
+                }
+
+                if state.pos > 0 {
+                    // move one down
+                    let mut down = enter_elevator.clone();
+                    down.pos -= 1;
+                    if down.floors[down.pos].push_elevator(&elevator) {
+                        sorted_queue.insert((down, step - 1));
                     }
-                    if state.pos < 3 {
-                        // move one up
-                        let mut up = enter_elevator.clone();
-                        up.pos += 1;
-                        if up.floors[up.pos].push_elevator(&elevator) && !seen.contains(&up) {
-                            queue.push_back((up, step + 1));
-                        }
+                }
+                if state.pos < 3 {
+                    // move one up
+                    let mut up = enter_elevator.clone();
+                    up.pos += 1;
+                    if up.floors[up.pos].push_elevator(&elevator) {
+                        sorted_queue.insert((up, step - 1));
                     }
                 }
             }
         }
-        0
+        min_steps
     }
-    fn solution_part_2(&self) -> u64 {
-        0
+    fn solution_part_2(&mut self) -> i64 {
+        self.floors[0].items.push(Item::Generator("elerium"));
+        self.floors[0].items.push(Item::Microchip("elerium"));
+        self.floors[0].items.push(Item::Generator("dilithium"));
+        self.floors[0].items.push(Item::Microchip("dilithium"));
+        self.solution_part_1()
     }
 }
 
@@ -184,8 +311,9 @@ pub fn solution() -> Result<()> {
 
     let result_part1 = challenge.solution_part_1();
     println!("result day_11 part 1: {result_part1}");
-    //assert_eq!(result_part1, XXX);
+    assert_eq!(result_part1, 33);
 
+    let mut challenge = ChallengeInput::from(input);
     let result_part2 = challenge.solution_part_2();
     println!("result day_11 part 2: {result_part2}");
     //assert_eq!(result_part2, YYY);
@@ -206,10 +334,6 @@ mod tests {
         let result_part1 = example.solution_part_1();
         println!("result day_11 part 1: {result_part1}");
         assert_eq!(result_part1, 11);
-
-        let result_part2 = example.solution_part_2();
-        println!("result day_11 part 2: {result_part2}");
-        //assert_eq!(result_part2, YYY);
 
         Ok(())
     }
