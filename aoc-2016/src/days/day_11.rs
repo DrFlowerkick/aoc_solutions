@@ -73,7 +73,7 @@ impl<'a> From<&'a str> for Floor<'a> {
 impl<'a> From<&Item<'a>> for Floor<'a> {
     fn from(value: &Item<'a>) -> Self {
         Floor {
-            items: vec![value.clone()],
+            items: vec![*value],
         }
     }
 }
@@ -97,7 +97,7 @@ impl<'a> Floor<'a> {
         for (i, item_a) in self.items.iter().enumerate() {
             for item_b in self.items.iter().skip(i + 1) {
                 let mut floor = Floor::from(item_a);
-                floor.items.push(item_b.clone());
+                floor.items.push(*item_b);
                 if floor.is_valid() {
                     elevators.push(floor);
                 }
@@ -145,6 +145,9 @@ impl<'a> Floor<'a> {
     }
 }
 
+// to prevent redundant moves we normalize the representation of floors
+// by counting for each floor the number of pairs, solo generators, and solo microchips.
+// This removes the identity of each item, but keeps the overall distribution of items.
 #[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Debug)]
 struct NormalizedFloors {
     pairs: Vec<usize>,
@@ -155,35 +158,22 @@ struct NormalizedFloors {
 
 impl<'a> From<&ChallengeInput<'a>> for NormalizedFloors {
     fn from(value: &ChallengeInput) -> Self {
-        let mut pairs: Vec<usize> = value
-            .floors
-            .iter()
-            .map(|floor| floor.count_pairs())
-            .enumerate()
-            .flat_map(|(i, c)| vec![i; c])
-            .collect();
-        let mut solo_generators: Vec<usize> = value
-            .floors
-            .iter()
-            .map(|floor| floor.count_generators())
-            .enumerate()
-            .flat_map(|(i, c)| vec![i; c])
-            .collect();
-        let mut solo_microchips: Vec<usize> = value
-            .floors
-            .iter()
-            .map(|floor| floor.count_microchips())
-            .enumerate()
-            .flat_map(|(i, c)| vec![i; c])
-            .collect();
-        pairs.sort();
-        solo_generators.sort();
-        solo_microchips.sort();
-
         NormalizedFloors {
-            pairs,
-            solo_generators,
-            solo_microchips,
+            pairs: value
+                .floors
+                .iter()
+                .map(|floor| floor.count_pairs())
+                .collect(),
+            solo_generators: value
+                .floors
+                .iter()
+                .map(|floor| floor.count_generators())
+                .collect(),
+            solo_microchips: value
+                .floors
+                .iter()
+                .map(|floor| floor.count_microchips())
+                .collect(),
             pos: value.pos,
         }
     }
