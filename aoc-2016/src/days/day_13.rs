@@ -61,15 +61,8 @@ impl ChallengeInput {
     fn is_open_space(&self, pos: &Point) -> bool {
         let x = pos.x as u64;
         let y = pos.y as u64;
-        let mut check = x * x + 3 * x + 2 * x * y + y + y * y + self.seed;
-        let mut even = true;
-        while check > 0 {
-            if check & 1 == 1 {
-                even = !even;
-            }
-            check >>= 1;
-        }
-        even
+        let check = x * x + 3 * x + 2 * x * y + y + y * y + self.seed;
+        check.count_ones() & 1 == 0
     }
 }
 
