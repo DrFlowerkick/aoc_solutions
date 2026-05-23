@@ -3,9 +3,9 @@
 use anyhow::Result;
 use md5::{Digest, compute};
 use rayon::prelude::*;
-use std::collections::BTreeSet;
+use std::collections::BTreeMap;
 
-fn u8_to_hex(byte: u8) -> [u8; 2] {
+const fn u8_to_hex(byte: u8) -> [u8; 2] {
     let low = byte & 0x0f;
     let high = byte >> 4;
     [high, low]
@@ -34,43 +34,31 @@ impl<'a> ChallengeInput<'a> {
     fn solution_part_1(&self) -> u64 {
         self.search_64th_key(0)
     }
-    #[cfg(any(feature = "long-run-time", test))]
     fn solution_part_2(&self) -> u64 {
         self.search_64th_key(2016)
     }
     fn search_64th_key(&self, stretch_hash: u64) -> u64 {
-        let mut indices: BTreeSet<u64> = BTreeSet::new();
-        let chunk_size = 500_000;
-        let mut start = 0u64;
-        let mut prev_hits: Vec<(Digest, u8, u64)> = Vec::new();
-        while indices.len() < 64 {
-            let end = start + chunk_size;
-            let hits: Vec<(Digest, u8, u64)> = (start..end)
-                .into_par_iter()
-                .filter_map(|index| self.check_triple_md5(index, stretch_hash))
-                .collect();
-            start += chunk_size;
+        let chunk_size = 25_000;
+        let hits: BTreeMap<u64, (Digest, u8)> = (0..chunk_size)
+            .into_par_iter()
+            .filter_map(|index| self.check_triple_md5(index, stretch_hash))
+            .collect();
 
-            // check hits from previous run
-            for (i, (_, hex, t_index)) in prev_hits.iter().enumerate() {
-                for (maybe_quintet, _, _) in prev_hits
-                    .iter()
-                    .chain(hits.iter())
+        // check hits from previous run
+        hits.iter()
+            .enumerate()
+            .filter_map(|(i, (t_index, (_, hex)))| {
+                hits.iter()
                     .skip(i + 1)
-                    .filter(|(_, _, q_index)| *q_index <= t_index + 1_000)
-                {
-                    if self.check_quintet_md5(*maybe_quintet, *hex) {
-                        indices.insert(*t_index);
-                    }
-                }
-            }
-
-            // test hits in next loop
-            prev_hits = hits;
-        }
-        indices.into_iter().nth(63).unwrap()
+                    .any(|(q_index, (maybe_quintet, _))| {
+                        *q_index <= t_index + 1_000 && self.check_quintet_md5(*maybe_quintet, *hex)
+                    })
+                    .then_some(*t_index)
+            })
+            .nth(63)
+            .unwrap()
     }
-    fn check_triple_md5(&self, index: u64, stretch_hash: u64) -> Option<(Digest, u8, u64)> {
+    fn check_triple_md5(&self, index: u64, stretch_hash: u64) -> Option<(u64, (Digest, u8))> {
         let mut data = compute(format!("{}{}", self.seed, index));
         let mut hex_bytes = [0_u8; 32];
         for _ in 0..stretch_hash {
@@ -86,7 +74,7 @@ impl<'a> ChallengeInput<'a> {
             } else {
                 count += 1;
                 if count == 3 {
-                    return Some((data, hex, index));
+                    return Some((index, (data, hex)));
                 }
             }
         }
@@ -116,16 +104,9 @@ pub fn solution() -> Result<()> {
     println!("result day_14 part 1: {result_part1}");
     assert_eq!(result_part1, 23_890);
 
-    #[cfg(any(feature = "long-run-time", test))]
-    {
-        let result_part2 = challenge.solution_part_2();
-        println!("result day_14 part 2: {result_part2}");
-        assert_eq!(result_part2, 22_696);
-    }
-    #[cfg(not(feature = "long-run-time"))]
-    {
-        println!("day 14 part 2 skipped because of long run time")
-    }
+    let result_part2 = challenge.solution_part_2();
+    println!("result day_14 part 2: {result_part2}");
+    assert_eq!(result_part2, 22_696);
 
     Ok(())
 }
@@ -165,7 +146,7 @@ mod tests {
         data = compute(&hex_bytes[..]);
         assert_eq!(format!("{:x}", data), "eec80a0c92dc8a0777c619d9bb51e910");
         for _ in 0..2015 {
-        digest_to_hex(data, &mut hex_bytes);
+            digest_to_hex(data, &mut hex_bytes);
             data = compute(&hex_bytes[..]);
         }
         assert_eq!(format!("{:x}", data), "a107ff634856bb300138cac6568c0f24");
@@ -177,26 +158,26 @@ mod tests {
         let example = ChallengeInput::from(input);
 
         // part 1
-        let (data, hex, index) = example.check_triple_md5(39, 0).unwrap();
+        let (index, (data, hex)) = example.check_triple_md5(39, 0).unwrap();
         println!("{:x}", data);
         assert_eq!(index, 39);
         assert_eq!(format!("{:x}", hex), "e");
         assert!(format!("{:x}", data).contains("eee"));
 
-        let (quintet, _, index) = example.check_triple_md5(816, 0).unwrap();
+        let (index, (quintet, _)) = example.check_triple_md5(816, 0).unwrap();
         println!("{:x}", quintet);
         assert_eq!(index, 816);
         assert!(example.check_quintet_md5(quintet, hex));
         assert!(format!("{:x}", quintet).contains("eeeee"));
 
         // part 2
-        let (data, hex, index) = example.check_triple_md5(10, 2016).unwrap();
+        let (index, (data, hex)) = example.check_triple_md5(10, 2016).unwrap();
         println!("{:x}", data);
         assert_eq!(index, 10);
         assert_eq!(format!("{:x}", hex), "e");
         assert!(format!("{:x}", data).contains("eee"));
 
-        let (quintet, _, index) = example.check_triple_md5(89, 2016).unwrap();
+        let (index, (quintet, _)) = example.check_triple_md5(89, 2016).unwrap();
         println!("{:x}", quintet);
         assert_eq!(index, 89);
         assert!(example.check_quintet_md5(quintet, hex));
