@@ -1,43 +1,53 @@
 # Modulo-Spickzettel (Cheat Sheet)
 
-**Grundidee:** `a ≡ b (mod m)` ⇔ gleiche Reste bei Division durch `m`.
+**Übersetzung der Notation:** `a ≡ b (mod m)` bedeutet: `a` und `b` lassen bei Division durch `m` denselben Rest.
+In Code: `a % m == b % m`.
 
-**Regeln:**  
-`(a±b) mod m = ((a mod m) ± (b mod m)) mod m`  
-`(a·b) mod m = ((a mod m)·(b mod m)) mod m`
+## 1) Grundrechenarten
 
-## 1) `(x + y) mod m = n`
-`x ≡ n − y (mod m)` ⇒ **kanonisch:** `x = (n − y) mod m`.
+Gilt immer, solange man das Ergebnis am Ende wieder modulo m nimmt:
 
-## 2) `(x · y) mod m = n`
-`d=gcd(y,m)`  
-- Wenn `d ∤ n` → **keine Lösung**.  
-- Sonst: `y'=y/d`, `m'=m/d`, `n'=n/d`, `gcd(y',m')=1`.  
-  `x0 ≡ n'·(y')^{-1} (mod m')`.  
-  **Alle Lösungen:** `x = x0 + k·m'` (`k=0,…,d−1`).
+- **Addition:** `(a + b) mod m = ((a mod m) + (b mod m)) mod m`
+- **Subtraktion:** `(a - b) mod m = ((a mod m) - (b mod m)) mod m` *(Achtung bei negativen Ergebnissen: Nutze `rem_euclid` in Code!)*
+- **Multiplikation:** `(a · b) mod m = ((a mod m) · (b mod m)) mod m`
 
-## 3) `1 / ((x + y) mod m) = n`
-Bedeutet: `((x+y) mod m) · n ≡ 1 (mod m)`  
-⇔ `n·x ≡ 1 − n·y (mod m)` ⇒ lineare Kongruenz in `x`.
+## 2) Gleichungen auflösen
 
-## 4) `x = (a + b) mod m`, `y = x^2 mod n`
-Erst kanonisches `x` berechnen, dann `y = (x^2) mod n`.  
-Wenn nur Klasse `x ≡ x0 (mod m)` bekannt: mögliche `y` periodisch in `k` mit `T = n / gcd(m,n)`.
+### Einfache Addition: `(x + y) mod m = n`
 
-**Modulares Inverses:** existiert ⇔ `gcd(a,m)=1`. Finde es mit erweitertem Euklid.  
-**Negativer Rest:** in vielen Sprachen positiv normalisieren (z. B. Rust `rem_euclid`).
+- **Lösung:** `x = (n - y) mod m`
 
-## 5) `modpow` – schnelles Potenzieren modulo m
-- Berechnet `a^e mod m` in `O(log e)` (Square-and-Multiply).
-- Rust (u64):
-  ```rust
-  pub fn modpow_u64(mut a:u64, mut e:u64, m:u64)->u64{
-      assert!(m!=0); if m==1{return 0;} let mut r=1%m; a%=m;
-      while e>0{ if e&1==1{ r=((r as u128*a as u128)%(m as u128)) as u64; }
-                 a=((a as u128*a as u128)%(m as u128)) as u64; e>>=1; }
-      r
-  }
-  // Beispiel: 7^560 mod 561 = 1
-  ```
-- BigInt: `num_bigint::BigUint::modpow(&a,&e,&m)`.
-- Inverses bei **primem** `m`: `a^{m-2} mod m` (Fermat).
+### Multiplikation: `(x · y) mod m = n`
+
+1. Berechne den größten gemeinsamen Teiler: `d = gcd(y, m)`
+2. Wenn `d` die Zahl `n` **nicht** teilt $\rightarrow$ **Keine Lösung existent**.
+3. Wenn doch: Teile die ganze Gleichung (inkl. Modulus `m`) durch `d`.
+4. Finde das **Modulare Inverse** der neuen Zahl `y'` und multipliziere es auf beiden Seiten.
+
+## 3) Modulares Inverses ("Division" im Modulo)
+
+Das modulare Inverse von `a` ist die Zahl $a^{-1}$, für die gilt:
+`a · a^{-1} ≡ 1 (mod m)`
+
+- **Bedingung:** Existiert nur, wenn `gcd(a, m) = 1` (a und m sind teilerfremd).
+- **Berechnung:** Über den *Erweiterten Euklidischen Algorithmus*.
+- **Trick für Primzahlen:** Wenn `m` eine Primzahl ist, gilt laut dem kleinen Satz von Fermat:
+  $a^{-1} \equiv a^{m-2} \pmod m$.
+
+## 4) Chinesischer Restsatz (Mehrere Modulo-Bedingungen)
+
+Wenn du ein `x` suchst für:
+`x ≡ r1 (mod p1)`
+`x ≡ r2 (mod p2)`
+`x ≡ r3 (mod p3)`
+(wobei p1, p2, p3 Primzahlen oder paarweise teilerfremd sind):
+
+1. $M = p_1 \cdot p_2 \cdot p_3$
+2. $M_i = M / p_i$ (für jede Zeile)
+3. $y_i =$ Modulares Inverse von $M_i$ modulo $p_i$
+4. **Lösung:** $x = (r_1 \cdot M_1 \cdot y_1 + r_2 \cdot M_2 \cdot y_2 + r_3 \cdot M_3 \cdot y_3) \pmod M$
+
+## 5) Praxis-Tipps für Programmierer (z.B. Rust)
+
+- **Negativer Modulo:** `-3 % 12` ergibt oft `-3`. Verwende `-3_i32.rem_euclid(12)`, um das korrekte mathematische Ergebnis `9` zu erhalten.
+- **Riesige Potenzen (`a^e mod m`):** Niemals zuerst potenzieren! Nutze den *Square-and-Multiply*-Algorithmus (oft `modpow` genannt), der in jedem Zwischenschritt den Modulo zieht. Vermeidet Integer-Overflows und läuft in `O(log e)` Zeit.

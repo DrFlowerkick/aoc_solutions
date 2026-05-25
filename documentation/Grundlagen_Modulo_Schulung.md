@@ -1,180 +1,165 @@
-# Grundlagenschulung: Rechnen modulo m (Division mit Rest)
+# Grundlagenschulung: Rechnen modulo m (Die Mathematik der Uhren)
 
-**Zielgruppe:** Schüler:innen eines Gymnasiums und Studierende im Grundstudium.  
-**Lernziele:** Lineare Kongruenzen lösen, modulare Inversen finden und zusammengesetzte Aufgaben sicher bearbeiten.
-
----
-
-## 1) Was bedeutet „modulo“?
-Wir schreiben `a ≡ b (mod m)`, wenn `a` und `b` beim Teilen durch `m` den gleichen Rest haben.  
-Beispiel: `17 ≡ 5 (mod 12)`, denn `17 = 1·12 + 5` und `5 = 0·12 + 5`.
-
-**Regeln (jeweils modulo m):**
-- `(a + b) mod m ≡ (a mod m + b mod m) mod m`
-- `(a − b) mod m ≡ (a mod m − b mod m) mod m`
-- `(a · b) mod m ≡ (a mod m · b mod m) mod m`
-
-**Wichtig:** „Division“ gibt es nur, wenn ein **modulares Inverses** existiert.
+**Zielgruppe:** Anfänger, Schüler:innen und Studierende, die bisher nur den Basis-Modulo-Operator (`%` in der Programmierung) kennen.  
+**Lernziele:** Die mathematische Schreibweise verstehen, lineare Kongruenzen lösen, modulare Inversen (Division) begreifen und mehrere Modulo-Bedingungen gleichzeitig lösen.
 
 ---
 
-## 2) Lösen von `(x + y) mod m = n`
-Interpretation: Beide Seiten sind Reste `0,…,m−1`. Die Kongruenz lautet  
-`x + y ≡ n (mod m)`.
+## 1) Was bedeutet „modulo“ in der Mathematik?
 
-**Nach x auflösen:**  
-`x ≡ n − y (mod m)` ⇒ **kanonisch:** `x = (n − y) mod m`.
+In der Programmierung ist `a % m` eine Operation, die dir den Rest einer Division ausgibt (z. B. `17 % 12 = 5`). In der Mathematik betrachtet man Modulo jedoch oft als einen **Raum** oder eine **Klasse** von Zahlen, die sich alle gleich verhalten.
 
-**Beispiel:** `(x + 9) mod 12 = 3` ⇒ `x ≡ 3 − 9 ≡ −6 ≡ 6 (mod 12)` ⇒ `x = 6`.
+Hier begegnet dir oft diese ungewohnte Schreibweise:
+`a ≡ b (mod m)`
 
----
+**Was bedeutet das übersetzt?**
+Das Zeichen `≡` nennt man **Kongruenz**. Es ist fast wie ein Gleichheitszeichen `=`, bedeutet aber: *"a und b haben denselben Rest, wenn man sie durch m teilt"*.
+In Programmier-Logik ausgedrückt heißt `a ≡ b (mod m)` einfach:
+`a % m == b % m`
 
-## 3) Lösen von `(x · y) mod m = n` (lineare Kongruenz)
-Schreibe `y·x ≡ n (mod m)` – eine lineare Kongruenz in `x`.
+**Ein anschauliches Beispiel (Die Uhr):**
+`17 ≡ 5 (mod 12)`
+Wenn es 17:00 Uhr ist, zeigt der Zeiger auf die 5. Beide Zahlen landen im „12er-System“ auf derselben Position.
 
-**Vorgehen:**
-1. `d = gcd(y, m)` berechnen.
-2. Falls `d ∤ n` ⇒ **keine Lösung**.
-3. Sonst reduzieren: `y' = y/d`, `m' = m/d`, `n' = n/d`. Dann gilt `gcd(y', m') = 1`.
-4. **Modulares Inverses** `inv = (y')^{-1} (mod m')` bestimmen.
-5. Basislösung: `x0 ≡ n' · inv (mod m')`.
-6. **Alle** Lösungen modulo `m`: `x = x0 + k·m'` für `k = 0,1,…,d−1`.
+**Die wichtigsten Grundregeln:**
+Du kannst in der Modulo-Welt ganz normal plus, minus und mal rechnen. Du musst nur aufpassen, dass du (wenn die Zahl zu groß wird) am Ende wieder den Rest ziehst.
 
-**Beispiel:** `(x · 6) mod 14 = 4`  
-`d = gcd(6,14)=2` teilt `4` ⇒ lösbar. `y'=3, m'=7, n'=2`.  
-Inverse von `3` mod `7` ist `5` (`3·5≡1`).  
-`x0 ≡ 2·5 ≡ 10 ≡ 3 (mod 7)`. **Alle Lösungen:** `x ∈ {3, 10}` modulo `14`.
+- **Addition:** `(a + b) mod m ≡ (a mod m + b mod m) mod m`
+- **Subtraktion:** `(a − b) mod m ≡ (a mod m − b mod m) mod m`
+- **Multiplikation:** `(a · b) mod m ≡ (a mod m · b mod m) mod m`
 
 ---
 
-## 4) Umgang mit `1 / ((x + y) mod m) = n`
-In modularer Arithmetik heißt „`1 / z`“ das **modulare Inverse** von `z` (falls existent).  
-Formal: `1 / z = n (mod m)` bedeutet `z · n ≡ 1 (mod m)`.
+## 2) Das Rätsel der „Division“: Modulares Inverses
 
-Setze `z = (x + y) mod m`. Dann gilt:  
-`((x + y) mod m) · n ≡ 1 (mod m)` ⇒ `n·x ≡ 1 − n·y (mod m)`.
+In der normalen Mathematik ist die Division das Gegenteil der Multiplikation. Wenn `3 * x = 15`, teilen wir durch 3 und erhalten `x = 5`.
+In der Modulo-Welt **gibt es keine klassische Division**. Stattdessen nutzen wir das sogenannte **Modulare Inverse**.
 
-Das ist wieder eine lineare Kongruenz in `x` mit Koeffizient `n`:
-- **Existenz:** Lösung genau dann, wenn `gcd(n, m)` den rechten Rest `1 − n·y` teilt.
-- **Spezialfall `gcd(n, m)=1`:** Immer eindeutig modulo `m`:  
-  `x ≡ (1 − n·y) · n^{-1} (mod m)`.
+**Was ist ein Inverses?**
+Das Inverse einer Zahl `a` ist die Zahl, mit der man `a` multiplizieren muss, damit genau `1` herauskommt.
+Beispiel modulo 7: Was ist das Inverse von 3?
+Wir suchen eine Zahl `x`, sodass `(3 · x) % 7 == 1`.
+Probieren wir es aus:
 
-**Beispiel:** `1/((x+4) mod 11) = 3 (mod 11)`  
-⇔ `((x+4) mod 11) · 3 ≡ 1` ⇔ `3x + 12 ≡ 1` ⇔ `3x ≡ −11 ≡ 0 (mod 11)`  
-⇒ `x ≡ 0 (mod 11)`.
+- 3 · 1 = 3
+- 3 · 2 = 6
+- 3 · 3 = 9 ≡ 2 (mod 7)
+- 3 · 4 = 12 ≡ 5 (mod 7)
+- 3 · 5 = 15 ≡ 1 (mod 7)  -> Treffer!
 
----
+Das modulare Inverse von 3 (modulo 7) ist also **5**. Statt "durch 3 zu teilen", multiplizieren wir in dieser Modulo-Welt einfach mit 5.
 
-## 5) Zusammengesetzte Aufgaben: `x = (a + b) mod m` und `y = x^2 mod n`
-In Programmen ist `x` meist der **kanonische Rest** `0,…,m−1`. Dann ist `y` eindeutig: `y = (x^2) mod n`.
-
-**Beispiel:** `a=23, b=19, m=12, n=7`  
-`x = (23+19) mod 12 = 42 mod 12 = 6`  
-`y = 6^2 mod 7 = 36 mod 7 = 1`.
-
-**Theorie-Hinweis:** Kennst du nur `x ≡ x0 (mod m)` als Klasse (ohne Vertreter), dann sind alle Kandidaten `x0 + k·m`.  
-Für `y = x^2 mod n` können dadurch **verschiedene** Reste entstehen. Die Menge ist periodisch in  
-`k` mit Periode `T = n / gcd(m, n)`. Um alle möglichen `y` zu sehen, reicht `k=0,…,T−1`.
+*Wichtig:* Ein Inverses existiert nur, wenn die Zahl und der Modulus (m) teilerfremd sind, ihr größter gemeinsamer Teiler (gcd / ggT) also 1 ist.
 
 ---
 
-## 6) Modulares Inverses in der Praxis
-Das Inverse `a^{-1} (mod m)` existiert **genau dann**, wenn `gcd(a, m) = 1`.  
-Man findet es mit dem **erweiterten Euklidischen Algorithmus**.
+## 3) Gleichungen auflösen (Lineare Kongruenzen)
 
-**Mini-Beispiel:** Inverses von `8 mod 29`?  
-`gcd(8,29)=1`. Ergebnis: `11`, denn `8·11=88≡1 (mod 29)`.
+Schauen wir uns an, wie wir einfache Gleichungen nach `x` auflösen, wenn alles modulo `m` stattfindet.
 
----
+### Addition: `(x + 9) mod 12 = 3`
 
-## 7) Häufige Stolpersteine
-- **„Durch Null teilen“:** Wenn `z ≡ 0 (mod m)`, existiert kein Inverses.
-- **gcd-Bedingung vergessen:** Für `y·x ≡ n (mod m)` muss `gcd(y, m)` den `n` teilen.
-- **Zwischenschritte nicht modulo m reduziert.**
-- **Negative Reste:** `−3 mod 12 = 9`. In vielen Sprachen brauchst du den nichtnegativen Rest, z. B. Rust `rem_euclid`.
+Wir schreiben es in mathematischer Notation:
+`x + 9 ≡ 3 (mod 12)`
+Wir rechnen auf beiden Seiten minus 9:
+`x ≡ 3 − 9 ≡ -6 (mod 12)`
+Eine negative Zeit auf der Uhr (6 Stunden zurück) ist dasselbe wie +6.
+`x = 6`
 
----
+### Multiplikation: `(x · 6) mod 14 = 4`
 
-## 8) Übungen (mit Lösungen)
+Hier haben wir ein Problem: Wir wollen durch 6 teilen, aber 6 und 14 sind nicht teilerfremd (beide sind durch 2 teilbar).
+**Lösungsweg:**
 
-**(A)** Löse nach `x`: `(x + 17) mod 23 = 5`.  
-**(B)** Löse nach `x`: `(9·x) mod 28 = 8`.  
-**(C)** Interpretiere und löse: `1/((x + 6) mod 13) = 4 (mod 13)`.  
-**(D)** Gegeben: `x = (a + b) mod 15`, mit `a=41`, `b=29`; `n=8`. Berechne `y = x^2 mod n`.
-
-**Lösungen:**  
-(A) `x ≡ 5 − 17 ≡ −12 ≡ 11 (mod 23)` ⇒ `x = 11`.  
-(B) `gcd(9,28)=1` ⇒ `inv(9)≡25` ⇒ `x ≡ 8·25 ≡ 200 ≡ 4 (mod 28)`.  
-(C) `((x+6) mod 13)·4 ≡ 1` ⇒ `4x + 24 ≡ 1` ⇒ `4x ≡ −23 ≡ 3 (mod 13)` ⇒ `x ≡ 3·10 ≡ 30 ≡ 4 (mod 13)`.  
-(D) `x = (41+29) mod 15 = 70 mod 15 = 10`. `y = 10^2 mod 8 = 100 mod 8 = 4`.
+1. Teile die ganze Gleichung (inklusive Modulus!) durch den gemeinsamen Teiler (2).
+2. Aus `6x ≡ 4 (mod 14)` wird `3x ≡ 2 (mod 7)`.
+3. Jetzt suchen wir das Inverse von 3 modulo 7. Wie oben gezeigt, ist das 5.
+4. Wir multiplizieren beide Seiten mit 5:
+   `x ≡ 2 · 5 ≡ 10 (mod 7)`
+5. `10 mod 7 = 3`. Unsere Basislösung ist `x = 3`.
 
 ---
 
-## 9) Kurzzusammenfassung (Cheat Sheet)
-- `(x + y) mod m = n` ⇒ `x ≡ n − y (mod m)` ⇒ `x = (n − y) mod m`.
-- `(x · y) mod m = n`:
-  - `d=gcd(y,m)`; wenn `d ∤ n` → keine Lösung.
-  - sonst reduzieren (`/d`), Inverses von `y'` modulo `m'` und `x0 ≡ n'·(y')^{-1}`; alle Lösungen `x = x0 + k·m'`.
-- `1 / z (mod m)` bedeutet `z^{-1} (mod m)` existiert (`gcd(z,m)=1`) und `z·z^{-1} ≡ 1`.
-- `1 / ((x+y) mod m) = n` ⇒ `(x+y)·n ≡ 1 (mod m)` ⇒ lineare Kongruenz in `x`.
-- `x = (a + b) mod m`, `y = x^2 mod n`: erst kanonisches `x`, dann `y` berechnen. Bei Klassen: Periode `T = n / gcd(m, n)`.
+## 4) Fortgeschrittenes Beispiel: Mehrere Primzahlen-Offsets finden
+
+Stell dir vor, du hast ein System, bei dem drei Zyklen mit unterschiedlichen Längen (Primzahlen) laufen. Du suchst den genauen Punkt `x`, an dem alle drei Zyklen einen bestimmten „Offset“ (Rest) erreichen.
+Dieses Problem löst der **Chinesische Restsatz (Chinese Remainder Theorem - CRT)**.
+
+**Das Problem:**
+Finde eine Zahl `x`, für die gilt:
+
+- `x % 3 == 2`  (Rest 2 bei Division durch 3)
+- `x % 5 == 3`  (Rest 3 bei Division durch 5)
+- `x % 7 == 2`  (Rest 2 bei Division durch 7)
+
+**Der Lösungsweg:**
+
+1. **Gesamt-Modulus (M) berechnen:** Multipliziere alle Primzahlen.
+   $$M = 3 \cdot 5 \cdot 7 = 105$$
+   Unser gesuchtes `x` wird sich alle 105 Schritte wiederholen.
+
+2. **Hilfszahlen ($M_i$) berechnen:** Teile M durch die jeweilige Primzahl.
+   - $M_1 = 105 / 3 = 35$
+   - $M_2 = 105 / 5 = 21$
+   - $M_3 = 105 / 7 = 15$
+
+3. **Inverse ($y_i$) für jede Hilfszahl finden:** Wir brauchen das Inverse von $M_i$ modulo der jeweiligen Primzahl.
+   - Für 3: Was ist das Inverse von 35 modulo 3?
+     (35 % 3 = 2. Das Inverse von 2 mod 3 ist 2, denn $2 \cdot 2 = 4 \equiv 1$). Also: **$y_1 = 2$**
+   - Für 5: Was ist das Inverse von 21 modulo 5?
+     (21 % 5 = 1. Das Inverse von 1 mod 5 ist 1). Also: **$y_2 = 1$**
+   - Für 7: Was ist das Inverse von 15 modulo 7?
+     (15 % 7 = 1. Das Inverse von 1 mod 7 ist 1). Also: **$y_3 = 1$**
+
+4. **Alles zusammensetzen:** Die Formel lautet:
+   $$x = (Rest_1 \cdot M_1 \cdot y_1 + Rest_2 \cdot M_2 \cdot y_2 + Rest_3 \cdot M_3 \cdot y_3) \pmod M$$
+
+   Einsetzen unserer Werte:
+   $$x = (2 \cdot 35 \cdot 2 + 3 \cdot 21 \cdot 1 + 2 \cdot 15 \cdot 1) \pmod{105}$$
+   $$x = (140 + 63 + 30) \pmod{105}$$
+   $$x = 233 \pmod{105}$$
+
+   Wie oft passt die 105 in die 233? Zweimal (210). Es bleibt ein Rest von 23.
+   **Lösung:** `x = 23`
+
+   *(Probe: 23 % 3 = 2. 23 % 5 = 3. 23 % 7 = 2. Es stimmt!)*
 
 ---
 
-## 10) Beispiel: `modpow` in Rust (schnelles Potenzieren modulo m)
+## 5) Häufige Stolpersteine für Programmierer
 
-**Idee:** Statt `a^e` riesig zu machen und dann `mod m` zu nehmen, nutzt man **Square-and-Multiply**.
-Das arbeitet in `O(log e)`-Schritten und reduziert zwischendurch immer wieder modulo `m`.
+- **Negative Reste:** In der Mathematik ist `-3 mod 12 = 9`. Viele Programmiersprachen (wie C, C++ oder Java) geben bei `-3 % 12` jedoch `-3` zurück. In Sprachen wie Rust solltest du für echte mathematische Modulo-Operationen immer `.rem_euclid(m)` verwenden anstelle des `%`-Operators.
+- **Division durch Null:** Wenn du modulo `m` rechnest und das Inverse nicht existiert, verhält sich das so, als würdest du durch Null teilen. Immer vorher den `gcd` checken!
 
-### Variante für `u64` (ohne externe Crates)
+---
+
+## 6) Beispiel aus der Praxis: Schnelles Potenzieren (modpow)
+
+Oft muss man riesige Zahlen berechnen, wie `7^560 mod 561`. Wenn man zuerst `7^560` ausrechnet, sprengt das den Speicher jedes Computers. Die Lösung ist *Square-and-Multiply*: Wir berechnen die Potenz in kleinen Schritten und ziehen nach jedem Schritt sofort wieder Modulo.
+
+### Implementierung in Rust
+
+Für standard Datentypen nutzt man am besten einen kleinen Puffer (wie `u128`), um Overflow bei der Multiplikation zu vermeiden:
+
 ```rust
-/// (base^exp) % modulus in O(log exp) mit Overflow-Schutz via u128.
+/// Berechnet (base^exp) % modulus sehr effizient.
 pub fn modpow_u64(mut base: u64, mut exp: u64, modulus: u64) -> u64 {
-    assert!(modulus != 0, "modpow: modulus must be > 0");
+    assert!(modulus != 0, "modpow: modulus darf nicht 0 sein");
     if modulus == 1 { return 0; }
-    let mut result = 1 % modulus;
-    base %= modulus;
+    
+    let mut result = 1;
+    base = base % modulus; // Direkt am Anfang reduzieren
+    
     while exp > 0 {
+        // Wenn der aktuelle Exponent ungerade ist, aufs Ergebnis multiplizieren
         if (exp & 1) == 1 {
             result = ((result as u128 * base as u128) % (modulus as u128)) as u64;
         }
+        // Basis für den nächsten Durchlauf quadrieren
         base = ((base as u128 * base as u128) % (modulus as u128)) as u64;
+        // Exponent halbieren (Bit-Shift nach rechts)
         exp >>= 1;
     }
     result
 }
-
-fn main() {
-    // Klassisches Beispiel: 7^560 mod 561 = 1
-    // (561 ist eine Carmichael-Zahl; hier liefert modpow korrekt 1)
-    let r = modpow_u64(7, 560, 561);
-    println!("{r}"); // 1
-}
 ```
-
-### Variante mit großen Zahlen (`num-bigint`)
-```toml
-# Cargo.toml
-[dependencies]
-num-bigint = "0.4"
-num-traits = "0.2"
-```
-```rust
-use num_bigint::BigUint;
-use num_traits::FromPrimitive;
-
-fn main() {
-    let a = BigUint::from_u64(7).unwrap();
-    let e = BigUint::from_u64(560).unwrap();
-    let m = BigUint::from_u64(561).unwrap();
-    let r = a.modpow(&e, &m);
-    println!("{r}"); // 1
-}
-```
-
-> **Tipp (Inverses bei primem Modulus):** Ist `m` **prim** und `gcd(a,m)=1`, dann ist  
-> `a^{-1} ≡ a^{m-2} (mod m)` (Fermat). Beispiel in Rust:
-> ```rust
-> let m: u64 = 1_000_000_007;
-> let inv_42 = modpow_u64(42, m - 2, m); // Inverses von 42 modulo m
-> ```
