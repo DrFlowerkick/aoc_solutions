@@ -32,7 +32,7 @@ impl Disc {
 
         // first transform equation to t = -(pos + num) mod len
         let rem = (-self.pos - self.num).rem_euclid(self.len);
-        
+
         // prod_m is product of len of each disc
         let prod_m_self = prod_m / self.len;
         // calc mod inverse of prod_m_self mod self.len = rem
@@ -67,7 +67,7 @@ impl ChallengeInput {
         let new_disc = Disc {
             num: self.discs.iter().map(|d| d.num).max().unwrap() + 1,
             len: 11,
-            pos: 0
+            pos: 0,
         };
         self.discs.push(new_disc);
         self.solution_part_1()
