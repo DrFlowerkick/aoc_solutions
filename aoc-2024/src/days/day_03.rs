@@ -15,12 +15,12 @@ impl From<&str> for Day03Data {
         Self {
             factors: re
                 .captures_iter(value)
-                .filter_map(|cap| cap.get(1).and_then(|c1| cap.get(2).map(|c2| (c1, c2))))
+                .filter_map(|cap| cap.get(1).zip(cap.get(2)))
                 .filter_map(|(c1, c2)| {
                     c1.as_str()
                         .parse::<i128>()
                         .ok()
-                        .and_then(|n1| c2.as_str().parse::<i128>().ok().map(|n2| (n1, n2)))
+                        .zip(c2.as_str().parse::<i128>().ok())
                 })
                 .collect(),
         }
