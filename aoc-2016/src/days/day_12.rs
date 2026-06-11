@@ -45,6 +45,7 @@ pub enum Action {
     Dec(Value),
     Jnz(Value, Value),
     Tgl(Value),
+    Out(Value),
 }
 
 impl From<&str> for Action {
@@ -56,51 +57,60 @@ impl From<&str> for Action {
             "dec" => Action::Dec(tokens.next().unwrap().into()),
             "jnz" => Action::Jnz(tokens.next().unwrap().into(), tokens.next().unwrap().into()),
             "tgl" => Action::Tgl(tokens.next().unwrap().into()),
+            "out" => Action::Out(tokens.next().unwrap().into()),
             _ => panic!("unknown token"),
         }
     }
 }
 
 impl Action {
-    pub fn apply(&self, register: &mut Register) -> (i64, Option<i64>) {
+    pub fn apply(&self, register: &mut Register) -> (i64, Option<i64>, Option<i64>) {
         match self {
             Action::Cpy(val, reg) => {
                 let Some(reg) = reg.register() else {
-                    return (1, None);
+                    return (1, None, None);
                 };
                 let val = val.value(register);
                 register.insert(reg, val);
-                (1, None)
+                (1, None, None)
             }
             Action::Inc(reg) => {
                 let Some(reg) = reg.register() else {
-                    return (1, None);
+                    return (1, None, None);
                 };
                 register.entry(reg).and_modify(|v| *v += 1).or_insert(1);
-                (1, None)
+                (1, None, None)
             }
             Action::Dec(reg) => {
                 let Some(reg) = reg.register() else {
-                    return (1, None);
+                    return (1, None, None);
                 };
                 register.entry(reg).and_modify(|v| *v -= 1).or_insert(-1);
-                (1, None)
+                (1, None, None)
             }
             Action::Jnz(reg, jump) => {
                 let val = reg.value(register);
                 let jump = jump.value(register);
-                if val != 0 { (jump, None) } else { (1, None) }
+                if val != 0 {
+                    (jump, None, None)
+                } else {
+                    (1, None, None)
+                }
             }
             Action::Tgl(delta) => {
                 let delta = delta.value(register);
-                (1, Some(delta))
+                (1, Some(delta), None)
+            }
+            Action::Out(out) => {
+                let out = out.value(register);
+                (1, None, Some(out))
             }
         }
     }
     pub fn toggle(&self) -> Action {
         match self {
             Action::Inc(v) => Action::Dec(*v),
-            Action::Dec(v) | Action::Tgl(v) => Action::Inc(*v),
+            Action::Dec(v) | Action::Tgl(v) | Action::Out(v) => Action::Inc(*v),
             Action::Jnz(v1, v2) => Action::Cpy(*v1, *v2),
             Action::Cpy(v1, v2) => Action::Jnz(*v1, *v2),
         }

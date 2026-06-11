@@ -24,7 +24,7 @@ impl ChallengeInput {
         let mut actions = self.actions.clone();
         let num_actions = self.actions.len() as i64;
         while index >= 0 && index < num_actions {
-            let (delta_index, toggle) = actions[index as usize].apply(&mut register);
+            let (delta_index, toggle, _) = actions[index as usize].apply(&mut register);
             if let Some(delta_toggle) = toggle {
                 let toggle_index = index + delta_toggle;
                 if toggle_index >= 0 && toggle_index < num_actions {
@@ -48,7 +48,7 @@ impl ChallengeInput {
                 register.entry('d').and_modify(|d| *d = 0);
                 index += 1;
             } else {
-                let (delta_index, toggle) = actions[index as usize].apply(&mut register);
+                let (delta_index, toggle, _) = actions[index as usize].apply(&mut register);
                 if let Some(delta_toggle) = toggle {
                     let toggle_index = index + delta_toggle;
                     if toggle_index >= 0 && toggle_index < num_actions {
