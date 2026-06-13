@@ -58,7 +58,9 @@ name = "aoc-2015"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "md5",
  "my_lib",
+ "rayon",
 ]
 
 [[package]]
