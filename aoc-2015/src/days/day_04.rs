@@ -42,9 +42,8 @@ impl ChallengeInput {
             start += chunk_size;
         }
     }
-    fn solution_part_2(&self) -> u64 {
+    fn solution_part_2(&self, mut start: u64) -> u64 {
         let chunk_size = 500_000;
-        let mut start = 0u64;
         loop {
             let end = start + chunk_size;
             let hits: BTreeSet<u64> = (start..end)
@@ -77,7 +76,7 @@ pub fn solution() -> Result<()> {
     println!("result day_04 part 1: {result_part1}");
     assert_eq!(result_part1, 254_575);
 
-    let result_part2 = challenge.solution_part_2();
+    let result_part2 = challenge.solution_part_2(result_part1);
     println!("result day_04 part 2: {result_part2}");
     assert_eq!(result_part2, 1_038_736);
 
