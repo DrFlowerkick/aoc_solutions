@@ -2,7 +2,7 @@
 
 use anyhow::Result;
 use my_lib::my_geometry::{my_point::Point, my_rectangle::Rectangle};
-use std::collections::VecDeque;
+use std::collections::HashMap;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum Action {
@@ -46,16 +46,46 @@ impl From<&str> for Instruction {
 }
 
 impl Instruction {
-    fn apply_to_off(&self) -> Option<Rectangle> {
-        match self.action {
-            Action::On | Action::Toggle => Some(self.area),
-            Action::Off => None,
+    fn apply(&self, on: &mut HashMap<Point, bool>) {
+        for y in self.area.corners()[3].y..=self.area.corners()[0].y {
+            for x in self.area.corners()[0].x..=self.area.corners()[3].x {
+                match self.action {
+                    Action::On => {
+                        on.entry((x, y).into())
+                            .and_modify(|v| *v = true)
+                            .or_insert(true);
+                    }
+                    Action::Off => {
+                        on.entry((x, y).into())
+                            .and_modify(|v| *v = false)
+                            .or_insert(false);
+                    }
+                    Action::Toggle => {
+                        on.entry((x, y).into())
+                            .and_modify(|v| *v = !*v)
+                            .or_insert(true);
+                    }
+                }
+            }
         }
     }
-    fn new_remaining(&self, remaining_area: Rectangle) -> Self {
-        Instruction {
-            action: self.action,
-            area: remaining_area,
+    fn apply_part2(&self, on: &mut HashMap<Point, u64>) {
+        for y in self.area.corners()[3].y..=self.area.corners()[0].y {
+            for x in self.area.corners()[0].x..=self.area.corners()[3].x {
+                match self.action {
+                    Action::On => {
+                        on.entry((x, y).into()).and_modify(|v| *v += 1).or_insert(1);
+                    }
+                    Action::Off => {
+                        on.entry((x, y).into())
+                            .and_modify(|v| *v = v.saturating_sub(1))
+                            .or_insert(0);
+                    }
+                    Action::Toggle => {
+                        on.entry((x, y).into()).and_modify(|v| *v += 2).or_insert(2);
+                    }
+                }
+            }
         }
     }
 }
@@ -73,47 +103,19 @@ impl From<&str> for ChallengeInput {
 }
 
 impl ChallengeInput {
-    fn solution_part_1(&self) -> i64 {
-        let mut on: Vec<Rectangle> = Vec::new();
+    fn solution_part_1(&self) -> usize {
+        let mut on: HashMap<Point, bool> = HashMap::with_capacity(1000 * 1000);
         for instruction in self.instructions.iter() {
-            let mut queue: VecDeque<Instruction> = VecDeque::new();
-            queue.push_back(*instruction);
-            while let Some(ins) = queue.pop_front() {
-                if let Some((intersection, index)) = on
-                    .iter()
-                    .enumerate()
-                    .find_map(|(i, o)| o.rectangle_intersection(&ins.area, true).map(|r| (r, i)))
-                {
-                    // apply action to intersection, collect remaining area and than continue with while loop
-
-                    // if action is on, keep on as is
-                    // else remove intersecting area from on, cut intersection and keep remaining areas as on
-                    if ins.action != Action::On {
-                        // pop intersecting area from on
-                        let old_on = on.swap_remove(index);
-                        // get remaining areas of old_on and add them to on
-                        for rem_on in old_on.cut_rectangle(&intersection, true) {
-                            on.push(rem_on);
-                        }
-                    }
-
-                    // cut remaining areas from instruction and add them to queue
-                    for rem_ins in ins.area.cut_rectangle(&intersection, true) {
-                        queue.push_back(ins.new_remaining(rem_ins));
-                    }
-
-                    continue;
-                }
-                // found no intersection: apply instruction to off area
-                if let Some(new_on) = ins.apply_to_off() {
-                    on.push(new_on);
-                }
-            }
+            instruction.apply(&mut on);
         }
-        on.iter().map(|r| r.surface_inclusive()).sum()
+        on.values().filter(|r| **r).count()
     }
     fn solution_part_2(&self) -> u64 {
-        0
+        let mut on: HashMap<Point, u64> = HashMap::with_capacity(1000 * 1000);
+        for instruction in self.instructions.iter() {
+            instruction.apply_part2(&mut on);
+        }
+        on.values().copied().sum()
     }
 }
 
@@ -123,11 +125,11 @@ pub fn solution() -> Result<()> {
 
     let result_part1 = challenge.solution_part_1();
     println!("result day_06 part 1: {result_part1}");
-    //assert_eq!(result_part1, XXX);
+    assert_eq!(result_part1, 377_891);
 
     let result_part2 = challenge.solution_part_2();
     println!("result day_06 part 2: {result_part2}");
-    //assert_eq!(result_part2, YYY);
+    assert_eq!(result_part2, 14_110_788);
 
     Ok(())
 }
@@ -148,7 +150,7 @@ mod tests {
 
         let result_part2 = example.solution_part_2();
         println!("result day_06 part 2: {result_part2}");
-        //assert_eq!(result_part2, YYY);
+        assert_eq!(result_part2, 1000 * 1000 + 2000 - 4);
 
         Ok(())
     }
