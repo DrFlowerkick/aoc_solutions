@@ -14,3 +14,4 @@ anyhow.workspace = true
 md5.workspace = true
 my_lib.workspace = true
 rayon.workspace = true
+serde_json.workspace = true
