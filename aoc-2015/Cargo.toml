@@ -13,5 +13,6 @@ all = ["short-run-time", "long-run-time"]
 anyhow.workspace = true
 md5.workspace = true
 my_lib.workspace = true
+rand.workspace = true
 rayon.workspace = true
 serde_json.workspace = true
