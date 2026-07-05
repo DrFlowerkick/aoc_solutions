@@ -56,11 +56,12 @@ impl<'a> ItemShop<'a> {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
-struct Character {
-    hit_points: u64,
-    damage: u64,
-    armor: u64,
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Character {
+    pub hit_points: u64,
+    pub damage: u64,
+    pub armor: u64,
+    pub mana: u64,
 }
 
 impl From<&str> for Character {
@@ -68,30 +69,25 @@ impl From<&str> for Character {
         let mut attr_iter = value.lines();
         let hit_points = attr_iter
             .next()
-            .unwrap()
-            .strip_prefix("Hit Points: ")
-            .unwrap()
-            .parse()
-            .unwrap();
+            .and_then(|s| s.strip_prefix("Hit Points: "))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
         let damage = attr_iter
             .next()
-            .unwrap()
-            .strip_prefix("Damage: ")
-            .unwrap()
-            .parse()
-            .unwrap();
+            .and_then(|s| s.strip_prefix("Damage: "))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
         let armor = attr_iter
             .next()
-            .unwrap()
-            .strip_prefix("Armor: ")
-            .unwrap()
-            .parse()
-            .unwrap();
+            .and_then(|s| s.strip_prefix("Armor: "))
+            .and_then(|v| v.parse().ok())
+            .unwrap_or_default();
 
         Character {
             hit_points,
             damage,
             armor,
+            mana: 0,
         }
     }
 }
@@ -205,11 +201,13 @@ mod tests {
             hit_points: 8,
             damage: 5,
             armor: 5,
+            mana: 0,
         };
         let opp = Character {
             hit_points: 12,
             damage: 7,
             armor: 2,
+            mana: 0,
         };
         assert!(me.fight(&opp));
     }
