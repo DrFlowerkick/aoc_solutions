@@ -123,24 +123,20 @@ impl Day09Data {
         start_index_block: usize,
     ) -> Option<(usize, usize)> {
         let first_free_index = match self.blocks[last_first_free_index] {
-            Some(_) => match self.blocks[last_first_free_index..]
-                .iter()
-                .position(|b| b.is_none())
-            {
-                Some(pos) => last_first_free_index + pos,
-                None => return None,
-            },
+            Some(_) => {
+                self.blocks[last_first_free_index..]
+                    .iter()
+                    .position(|b| b.is_none())?
+                    + last_first_free_index
+            }
             None => last_first_free_index,
         };
         let mut start_index_free = first_free_index;
         loop {
-            let start_index_next_block_after_free = match self.blocks[start_index_free..]
+            let start_index_next_block_after_free = self.blocks[start_index_free..]
                 .iter()
-                .position(|b| b.is_some())
-            {
-                Some(pos) => start_index_free + pos,
-                None => return None, // could not find any more blocks and therefore we must be right of start_index_block
-            };
+                .position(|b| b.is_some())?
+                + start_index_free;
             if start_index_next_block_after_free > start_index_block {
                 // could not find enough free space left of current block
                 return None;
@@ -148,13 +144,10 @@ impl Day09Data {
             if start_index_next_block_after_free - start_index_free >= min_size {
                 return Some((first_free_index, start_index_free));
             }
-            start_index_free = match self.blocks[start_index_next_block_after_free..]
+            start_index_free = self.blocks[start_index_next_block_after_free..]
                 .iter()
-                .position(|b| b.is_none())
-            {
-                Some(pos) => start_index_next_block_after_free + pos,
-                None => return None, // could not find any more free blocks
-            };
+                .position(|b| b.is_none())?
+                + start_index_next_block_after_free;
         }
     }
 

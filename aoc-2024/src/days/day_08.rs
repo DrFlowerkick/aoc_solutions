@@ -40,7 +40,7 @@ impl From<&str> for Day08Data {
 impl Day08Data {
     fn count_anti_nodes(&self) -> HashSet<Point> {
         let mut anti_nodes: HashSet<Point> = HashSet::new();
-        for (_, points) in self.antennas.iter() {
+        for points in self.antennas.values() {
             for (index, antenna_1) in points.iter().enumerate() {
                 for antenna_2 in &points[index + 1..] {
                     let distance: Point = (
@@ -71,7 +71,7 @@ impl Day08Data {
     }
     fn count_anti_nodes_extended(&self) -> HashSet<Point> {
         let mut anti_nodes: HashSet<Point> = HashSet::new();
-        for (_, points) in self.antennas.iter() {
+        for points in self.antennas.values() {
             for (index, antenna_1) in points.iter().enumerate() {
                 for antenna_2 in &points[index + 1..] {
                     let distance: Point = (
